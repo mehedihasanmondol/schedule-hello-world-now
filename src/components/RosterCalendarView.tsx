@@ -1,9 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, Clock, Users, DollarSign, Edit, Trash2, CheckCircle } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Calendar, Clock, Users, DollarSign, Settings, CheckCircle, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Roster, Profile } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
@@ -11,10 +13,12 @@ import { useToast } from "@/hooks/use-toast";
 interface RosterCalendarViewProps {
   rosters: Roster[];
   onRefresh: () => void;
+  onEdit?: (roster: Roster) => void;
 }
 
-export const RosterCalendarView = ({ rosters, onRefresh }: RosterCalendarViewProps) => {
+export const RosterCalendarView = ({ rosters, onRefresh, onEdit }: RosterCalendarViewProps) => {
   const [rosterProfiles, setRosterProfiles] = useState<Record<string, Profile[]>>({});
+  const [expandedStaff, setExpandedStaff] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -209,7 +213,7 @@ export const RosterCalendarView = ({ rosters, onRefresh }: RosterCalendarViewPro
                   </span>
                 </div>
                 <Progress value={progress} className="h-2" />
-                <div className="flex items-center gap-4 text-xs text-gray-600">
+                <div className="flex items-center justify-between text-xs text-gray-600">
                   <div className="flex items-center gap-1">
                     <Users className="h-3 w-3" />
                     <span>{assignedProfiles.length} assigned</span>
@@ -223,26 +227,31 @@ export const RosterCalendarView = ({ rosters, onRefresh }: RosterCalendarViewPro
                 </div>
               </div>
 
-              {/* Assigned Profiles */}
+              {/* Assigned Profiles - Collapsible */}
               {assignedProfiles.length > 0 && (
-                <div className="space-y-1">
-                  <div className="text-sm font-medium text-gray-700">Assigned Staff:</div>
-                  <div className="flex flex-wrap gap-1">
-                    {assignedProfiles.slice(0, 3).map((profile) => (
-                      <Badge key={profile.id} variant="secondary" className="text-xs">
-                        {profile.full_name}
-                      </Badge>
-                    ))}
-                    {assignedProfiles.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{assignedProfiles.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-                </div>
+                <Collapsible 
+                  open={expandedStaff[roster.id]} 
+                  onOpenChange={(open) => setExpandedStaff(prev => ({ ...prev, [roster.id]: open }))}
+                >
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-full justify-between p-0 h-auto">
+                      <div className="text-sm font-medium text-gray-700">Assigned Staff:</div>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedStaff[roster.id] ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-1 mt-2">
+                    <div className="flex flex-wrap gap-1">
+                      {assignedProfiles.map((profile) => (
+                        <Badge key={profile.id} variant="secondary" className="text-xs">
+                          {profile.full_name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               )}
 
-              {/* Total Hours and Payable */}
+              {/* Total Hours and Payable - Side by Side */}
               <div className="grid grid-cols-2 gap-4 pt-2 border-t">
                 <div className="text-center">
                   <div className="text-lg font-semibold text-blue-600">
@@ -274,29 +283,38 @@ export const RosterCalendarView = ({ rosters, onRefresh }: RosterCalendarViewPro
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-2 border-t">
-                <Button variant="outline" size="sm" className="flex-1">
-                  <Edit className="h-3 w-3 mr-1" />
-                  Edit
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => handleStatusChange(roster.id, roster.status === 'confirmed' ? 'pending' : 'confirmed')}
-                  className="flex-1"
-                >
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  {roster.status === 'confirmed' ? 'Pending' : 'Confirm'}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => handleDelete(roster.id)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+              {/* Compact Manage Button */}
+              <div className="flex justify-center pt-2 border-t">
+                <div className="flex items-center gap-1">
+                  {onEdit && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => onEdit(roster)}
+                      className="h-8 px-2"
+                    >
+                      <Settings className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                  )}
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleStatusChange(roster.id, roster.status === 'confirmed' ? 'pending' : 'confirmed')}
+                    className="h-8 px-2"
+                  >
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    {roster.status === 'confirmed' ? 'Pending' : 'Confirm'}
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleDelete(roster.id)}
+                    className="text-red-600 hover:text-red-700 h-8 px-2"
+                  >
+                    Delete
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

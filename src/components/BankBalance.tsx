@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { DollarSign, TrendingUp, TrendingDown, Building2, Plus, Minus } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Building2, Plus, Minus, Edit, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { BankAccount, BankTransaction, Client, Project, Profile } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
@@ -18,18 +17,21 @@ export const BankBalance = () => {
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false);
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<BankTransaction | null>(null);
   const { toast } = useToast();
 
   const [transactionForm, setTransactionForm] = useState({
     bank_account_id: "",
-    amount: 0,
+    amount: "",
     description: "",
     category: "",
     client_id: "",
     project_id: "",
+    profile_id: "",
     date: new Date().toISOString().split('T')[0]
   });
 
@@ -38,7 +40,23 @@ export const BankBalance = () => {
     fetchTransactions();
     fetchClients();
     fetchProjects();
+    fetchProfiles();
   }, []);
+
+  const fetchProfiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('is_active', true)
+        .order('full_name');
+
+      if (error) throw error;
+      setProfiles(data as Profile[]);
+    } catch (error) {
+      console.error('Error fetching profiles:', error);
+    }
+  };
 
   const fetchClients = async () => {
     try {
@@ -67,56 +85,6 @@ export const BankBalance = () => {
       setProjects(data as Project[]);
     } catch (error) {
       console.error('Error fetching projects:', error);
-    }
-  };
-
-  const handleTransactionSubmit = async (type: 'deposit' | 'withdrawal') => {
-    if (!transactionForm.bank_account_id || !transactionForm.description || !transactionForm.category) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('bank_transactions')
-        .insert([{
-          ...transactionForm,
-          type,
-          amount: Math.abs(transactionForm.amount),
-          client_id: transactionForm.client_id || null,
-          project_id: transactionForm.project_id || null
-        }]);
-
-      if (error) throw error;
-      
-      toast({ 
-        title: "Success", 
-        description: `${type === 'deposit' ? 'Deposit' : 'Withdrawal'} recorded successfully` 
-      });
-      
-      setIsDepositDialogOpen(false);
-      setIsWithdrawDialogOpen(false);
-      setTransactionForm({
-        bank_account_id: "",
-        amount: 0,
-        description: "",
-        category: "",
-        client_id: "",
-        project_id: "",
-        date: new Date().toISOString().split('T')[0]
-      });
-      fetchTransactions();
-    } catch (error) {
-      console.error('Error recording transaction:', error);
-      toast({
-        title: "Error",
-        description: "Failed to record transaction",
-        variant: "destructive"
-      });
     }
   };
 
@@ -162,6 +130,129 @@ export const BankBalance = () => {
     }
   };
 
+  const resetForm = () => {
+    setTransactionForm({
+      bank_account_id: "",
+      amount: "",
+      description: "",
+      category: "",
+      client_id: "",
+      project_id: "",
+      profile_id: "",
+      date: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const handleTransactionSubmit = async (type: 'deposit' | 'withdrawal') => {
+    if (!transactionForm.bank_account_id || !transactionForm.description || !transactionForm.category || !transactionForm.amount) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const transactionData = {
+        bank_account_id: transactionForm.bank_account_id,
+        type,
+        amount: Math.abs(parseFloat(transactionForm.amount)),
+        description: transactionForm.description,
+        category: transactionForm.category,
+        client_id: transactionForm.client_id || null,
+        project_id: transactionForm.project_id || null,
+        profile_id: transactionForm.profile_id || null,
+        date: transactionForm.date
+      };
+
+      if (editingTransaction) {
+        const { error } = await supabase
+          .from('bank_transactions')
+          .update(transactionData)
+          .eq('id', editingTransaction.id);
+
+        if (error) throw error;
+        
+        toast({ 
+          title: "Success", 
+          description: "Transaction updated successfully" 
+        });
+      } else {
+        const { error } = await supabase
+          .from('bank_transactions')
+          .insert([transactionData]);
+
+        if (error) throw error;
+        
+        toast({ 
+          title: "Success", 
+          description: `${type === 'deposit' ? 'Deposit' : 'Withdrawal'} recorded successfully` 
+        });
+      }
+      
+      setIsDepositDialogOpen(false);
+      setIsWithdrawDialogOpen(false);
+      setEditingTransaction(null);
+      resetForm();
+      fetchTransactions();
+    } catch (error) {
+      console.error('Error recording transaction:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record transaction",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditTransaction = (transaction: BankTransaction) => {
+    setEditingTransaction(transaction);
+    setTransactionForm({
+      bank_account_id: transaction.bank_account_id || "",
+      amount: transaction.amount.toString(),
+      description: transaction.description,
+      category: transaction.category,
+      client_id: transaction.client_id || "",
+      project_id: transaction.project_id || "",
+      profile_id: transaction.profile_id || "",
+      date: transaction.date
+    });
+    
+    if (transaction.type === 'deposit') {
+      setIsDepositDialogOpen(true);
+    } else {
+      setIsWithdrawDialogOpen(true);
+    }
+  };
+
+  const handleDeleteTransaction = async (transactionId: string) => {
+    if (!confirm("Are you sure you want to delete this transaction?")) return;
+
+    try {
+      const { error } = await supabase
+        .from('bank_transactions')
+        .delete()
+        .eq('id', transactionId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Transaction deleted successfully",
+      });
+
+      fetchTransactions();
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete transaction",
+        variant: "destructive"
+      });
+    }
+  };
+
   const calculateTotalBalance = () => {
     return bankAccounts.reduce((total, account) => {
       const accountTransactions = transactions.filter(t => t.bank_account_id === account.id);
@@ -192,7 +283,7 @@ export const BankBalance = () => {
         <Label htmlFor="bank_account_id">Bank Account *</Label>
         <Select 
           value={transactionForm.bank_account_id} 
-          onValueChange={(value) => setTransactionForm({ ...transactionForm, bank_account_id: value })}
+          onValueChange={(value) => setTransactionForm(prev => ({ ...prev, bank_account_id: value }))}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select bank account" />
@@ -215,7 +306,7 @@ export const BankBalance = () => {
           step="0.01"
           min="0"
           value={transactionForm.amount}
-          onChange={(e) => setTransactionForm({ ...transactionForm, amount: parseFloat(e.target.value) || 0 })}
+          onChange={(e) => setTransactionForm(prev => ({ ...prev, amount: e.target.value }))}
           placeholder="0.00"
           required
         />
@@ -226,7 +317,7 @@ export const BankBalance = () => {
         <Input
           id="description"
           value={transactionForm.description}
-          onChange={(e) => setTransactionForm({ ...transactionForm, description: e.target.value })}
+          onChange={(e) => setTransactionForm(prev => ({ ...prev, description: e.target.value }))}
           placeholder="Enter transaction description"
           required
         />
@@ -236,7 +327,7 @@ export const BankBalance = () => {
         <Label htmlFor="category">Category *</Label>
         <Select 
           value={transactionForm.category} 
-          onValueChange={(value) => setTransactionForm({ ...transactionForm, category: value })}
+          onValueChange={(value) => setTransactionForm(prev => ({ ...prev, category: value }))}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select category" />
@@ -252,10 +343,30 @@ export const BankBalance = () => {
       </div>
 
       <div>
+        <Label htmlFor="profile_id">Profile (Optional)</Label>
+        <Select 
+          value={transactionForm.profile_id} 
+          onValueChange={(value) => setTransactionForm(prev => ({ ...prev, profile_id: value === "none" ? "" : value }))}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select profile" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">None</SelectItem>
+            {profiles.map((profile) => (
+              <SelectItem key={profile.id} value={profile.id}>
+                {profile.full_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
         <Label htmlFor="client_id">Client (Optional)</Label>
         <Select 
           value={transactionForm.client_id} 
-          onValueChange={(value) => setTransactionForm({ ...transactionForm, client_id: value })}
+          onValueChange={(value) => setTransactionForm(prev => ({ ...prev, client_id: value === "none" ? "" : value }))}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select client" />
@@ -275,14 +386,14 @@ export const BankBalance = () => {
         <Label htmlFor="project_id">Project (Optional)</Label>
         <Select 
           value={transactionForm.project_id} 
-          onValueChange={(value) => setTransactionForm({ ...transactionForm, project_id: value })}
+          onValueChange={(value) => setTransactionForm(prev => ({ ...prev, project_id: value === "none" ? "" : value }))}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select project" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">None</SelectItem>
-            {projects.filter(p => !transactionForm.client_id || transactionForm.client_id === "none" || p.client_id === transactionForm.client_id).map((project) => (
+            {projects.filter(p => !transactionForm.client_id || transactionForm.client_id === "" || p.client_id === transactionForm.client_id).map((project) => (
               <SelectItem key={project.id} value={project.id}>
                 {project.name}
               </SelectItem>
@@ -297,13 +408,13 @@ export const BankBalance = () => {
           id="date"
           type="date"
           value={transactionForm.date}
-          onChange={(e) => setTransactionForm({ ...transactionForm, date: e.target.value })}
+          onChange={(e) => setTransactionForm(prev => ({ ...prev, date: e.target.value }))}
           required
         />
       </div>
 
       <Button type="submit" className="w-full">
-        Record {type === 'deposit' ? 'Deposit' : 'Withdrawal'}
+        {editingTransaction ? 'Update' : 'Record'} {type === 'deposit' ? 'Deposit' : 'Withdrawal'}
       </Button>
     </form>
   );
@@ -323,7 +434,13 @@ export const BankBalance = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
+          <Dialog open={isDepositDialogOpen} onOpenChange={(open) => {
+            setIsDepositDialogOpen(open);
+            if (!open) {
+              setEditingTransaction(null);
+              resetForm();
+            }
+          }}>
             <DialogTrigger asChild>
               <Button className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
                 <Plus className="h-4 w-4" />
@@ -332,13 +449,19 @@ export const BankBalance = () => {
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Record Deposit</DialogTitle>
+                <DialogTitle>{editingTransaction ? 'Edit' : 'Record'} Deposit</DialogTitle>
               </DialogHeader>
               <TransactionForm type="deposit" />
             </DialogContent>
           </Dialog>
 
-          <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
+          <Dialog open={isWithdrawDialogOpen} onOpenChange={(open) => {
+            setIsWithdrawDialogOpen(open);
+            if (!open) {
+              setEditingTransaction(null);
+              resetForm();
+            }
+          }}>
             <DialogTrigger asChild>
               <Button variant="outline" className="flex items-center gap-2 text-red-600 border-red-600 hover:bg-red-50">
                 <Minus className="h-4 w-4" />
@@ -347,7 +470,7 @@ export const BankBalance = () => {
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Record Withdrawal</DialogTitle>
+                <DialogTitle>{editingTransaction ? 'Edit' : 'Record'} Withdrawal</DialogTitle>
               </DialogHeader>
               <TransactionForm type="withdrawal" />
             </DialogContent>
@@ -464,6 +587,7 @@ export const BankBalance = () => {
                   <th className="text-left py-3 px-4 font-medium text-gray-600">Type</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600">Amount</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600">Account</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -474,6 +598,9 @@ export const BankBalance = () => {
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-medium text-gray-900">{transaction.description}</div>
+                      {transaction.profiles && (
+                        <div className="text-sm text-gray-600">Profile: {transaction.profiles.full_name}</div>
+                      )}
                       {transaction.clients && (
                         <div className="text-sm text-gray-600">Client: {transaction.clients.company}</div>
                       )}
@@ -496,6 +623,21 @@ export const BankBalance = () => {
                     </td>
                     <td className="py-3 px-4 text-gray-600">
                       {transaction.bank_accounts?.bank_name || 'N/A'}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditTransaction(transaction)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteTransaction(transaction.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

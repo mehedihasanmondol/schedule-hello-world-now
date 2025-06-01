@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,11 +9,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Roster as RosterType, Profile, Client, Project } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { RosterCalendarView } from "./RosterCalendarView";
+import { RosterForm } from "./RosterForm";
 
 export const Roster = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [rosters, setRosters] = useState<RosterType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingRoster, setEditingRoster] = useState<RosterType | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -53,6 +55,11 @@ export const Roster = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = (roster: RosterType) => {
+    setEditingRoster(roster);
+    setIsFormOpen(true);
   };
 
   const handleStatusChange = async (rosterId: string, newStatus: string) => {
@@ -150,7 +157,13 @@ export const Roster = () => {
             <p className="text-gray-600">Schedule and manage staff assignments</p>
           </div>
         </div>
-        <Button className="flex items-center gap-2">
+        <Button 
+          className="flex items-center gap-2"
+          onClick={() => {
+            setEditingRoster(null);
+            setIsFormOpen(true);
+          }}
+        >
           <Plus className="h-4 w-4" />
           Create Roster
         </Button>
@@ -246,7 +259,7 @@ export const Roster = () => {
             </TabsList>
             
             <TabsContent value="calendar" className="mt-6">
-              <RosterCalendarView rosters={filteredRosters} onRefresh={fetchRosters} />
+              <RosterCalendarView rosters={filteredRosters} onRefresh={fetchRosters} onEdit={handleEdit} />
             </TabsContent>
             
             <TabsContent value="list" className="mt-6">
@@ -322,7 +335,7 @@ export const Roster = () => {
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(roster)}>
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button 
@@ -351,6 +364,16 @@ export const Roster = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      <RosterForm 
+        open={isFormOpen} 
+        onOpenChange={(open) => {
+          setIsFormOpen(open);
+          if (!open) setEditingRoster(null);
+        }}
+        editingRoster={editingRoster}
+        onRefresh={fetchRosters}
+      />
     </div>
   );
 };
