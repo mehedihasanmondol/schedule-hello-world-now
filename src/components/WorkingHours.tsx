@@ -40,6 +40,34 @@ export const WorkingHours = () => {
     status: "pending"
   });
 
+  // Helper functions for formatting dates and times
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatTime = (timeString: string) => {
+    if (!timeString) return 'N/A';
+    const [hours, minutes] = timeString.split(':');
+    const time = new Date();
+    time.setHours(parseInt(hours), parseInt(minutes));
+    return time.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const formatTimeRange = (startTime: string, endTime: string) => {
+    if (!startTime || !endTime) return 'Not set';
+    return `${formatTime(startTime)} - ${formatTime(endTime)}`;
+  };
+
   useEffect(() => {
     fetchWorkingHours();
     fetchProfiles();
@@ -493,11 +521,11 @@ export const WorkingHours = () => {
                       </div>
                     </td>
                     <td className="py-3 px-4 text-gray-600">
-                      {new Date(wh.date).toLocaleDateString()}
+                      {formatDate(wh.date)}
                     </td>
                     <td className="py-3 px-4 text-gray-600">
                       <div className="text-sm">
-                        {wh.start_time} - {wh.end_time}
+                        {formatTimeRange(wh.start_time, wh.end_time)}
                         <div className="text-xs text-gray-500">{wh.total_hours}h</div>
                       </div>
                     </td>
@@ -505,7 +533,7 @@ export const WorkingHours = () => {
                       <div className="text-sm">
                         {wh.sign_in_time && wh.sign_out_time ? (
                           <>
-                            {wh.sign_in_time} - {wh.sign_out_time}
+                            {formatTimeRange(wh.sign_in_time, wh.sign_out_time)}
                             <div className="text-xs text-gray-500">{wh.actual_hours || 0}h</div>
                           </>
                         ) : (
