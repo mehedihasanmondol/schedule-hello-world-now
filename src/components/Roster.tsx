@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Calendar, List, Users } from "lucide-react";
+import { Plus, Search, Calendar, List, Users, Edit, Trash2, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Roster as RosterType, Profile, Client, Project } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +55,58 @@ export const Roster = () => {
     }
   };
 
+  const handleStatusChange = async (rosterId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('rosters')
+        .update({ status: newStatus })
+        .eq('id', rosterId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Roster status updated to ${newStatus}`,
+      });
+
+      fetchRosters();
+    } catch (error) {
+      console.error('Error updating roster status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update roster status",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDelete = async (rosterId: string) => {
+    if (!confirm("Are you sure you want to delete this roster?")) return;
+
+    try {
+      const { error } = await supabase
+        .from('rosters')
+        .delete()
+        .eq('id', rosterId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Roster deleted successfully",
+      });
+
+      fetchRosters();
+    } catch (error) {
+      console.error('Error deleting roster:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete roster",
+        variant: "destructive"
+      });
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -89,6 +141,7 @@ export const Roster = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Users className="h-8 w-8 text-blue-600" />
@@ -193,7 +246,7 @@ export const Roster = () => {
             </TabsList>
             
             <TabsContent value="calendar" className="mt-6">
-              <RosterCalendarView rosters={filteredRosters} />
+              <RosterCalendarView rosters={filteredRosters} onRefresh={fetchRosters} />
             </TabsContent>
             
             <TabsContent value="list" className="mt-6">
@@ -208,6 +261,7 @@ export const Roster = () => {
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Hours</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Expected</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -265,6 +319,28 @@ export const Roster = () => {
                           }>
                             {roster.status || 'pending'}
                           </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleStatusChange(roster.id, roster.status === 'confirmed' ? 'pending' : 'confirmed')}
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-red-600 hover:text-red-700" 
+                              onClick={() => handleDelete(roster.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}

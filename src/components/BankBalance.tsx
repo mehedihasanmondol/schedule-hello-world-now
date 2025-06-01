@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -70,13 +71,24 @@ export const BankBalance = () => {
   };
 
   const handleTransactionSubmit = async (type: 'deposit' | 'withdrawal') => {
+    if (!transactionForm.bank_account_id || !transactionForm.description || !transactionForm.category) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('bank_transactions')
         .insert([{
           ...transactionForm,
           type,
-          amount: Math.abs(transactionForm.amount)
+          amount: Math.abs(transactionForm.amount),
+          client_id: transactionForm.client_id || null,
+          project_id: transactionForm.project_id || null
         }]);
 
       if (error) throw error;
@@ -249,7 +261,7 @@ export const BankBalance = () => {
             <SelectValue placeholder="Select client" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">None</SelectItem>
+            <SelectItem value="none">None</SelectItem>
             {clients.map((client) => (
               <SelectItem key={client.id} value={client.id}>
                 {client.company}
@@ -269,8 +281,8 @@ export const BankBalance = () => {
             <SelectValue placeholder="Select project" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">None</SelectItem>
-            {projects.filter(p => !transactionForm.client_id || p.client_id === transactionForm.client_id).map((project) => (
+            <SelectItem value="none">None</SelectItem>
+            {projects.filter(p => !transactionForm.client_id || transactionForm.client_id === "none" || p.client_id === transactionForm.client_id).map((project) => (
               <SelectItem key={project.id} value={project.id}>
                 {project.name}
               </SelectItem>

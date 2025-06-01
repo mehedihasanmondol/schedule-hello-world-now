@@ -1,18 +1,21 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, Clock, Users, DollarSign } from "lucide-react";
+import { Calendar, Clock, Users, DollarSign, Edit, Trash2, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Roster, Profile } from "@/types/database";
+import { useToast } from "@/hooks/use-toast";
 
 interface RosterCalendarViewProps {
   rosters: Roster[];
+  onRefresh: () => void;
 }
 
-export const RosterCalendarView = ({ rosters }: RosterCalendarViewProps) => {
+export const RosterCalendarView = ({ rosters, onRefresh }: RosterCalendarViewProps) => {
   const [rosterProfiles, setRosterProfiles] = useState<Record<string, Profile[]>>({});
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchRosterProfiles();
@@ -93,6 +96,58 @@ export const RosterCalendarView = ({ rosters }: RosterCalendarViewProps) => {
       case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const handleStatusChange = async (rosterId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('rosters')
+        .update({ status: newStatus })
+        .eq('id', rosterId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Roster status updated to ${newStatus}`,
+      });
+
+      onRefresh();
+    } catch (error) {
+      console.error('Error updating roster status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update roster status",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDelete = async (rosterId: string) => {
+    if (!confirm("Are you sure you want to delete this roster?")) return;
+
+    try {
+      const { error } = await supabase
+        .from('rosters')
+        .delete()
+        .eq('id', rosterId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Roster deleted successfully",
+      });
+
+      onRefresh();
+    } catch (error) {
+      console.error('Error deleting roster:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete roster",
+        variant: "destructive"
+      });
     }
   };
 
@@ -218,6 +273,31 @@ export const RosterCalendarView = ({ rosters }: RosterCalendarViewProps) => {
                   <div>{roster.notes}</div>
                 </div>
               )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2 border-t">
+                <Button variant="outline" size="sm" className="flex-1">
+                  <Edit className="h-3 w-3 mr-1" />
+                  Edit
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleStatusChange(roster.id, roster.status === 'confirmed' ? 'pending' : 'confirmed')}
+                  className="flex-1"
+                >
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  {roster.status === 'confirmed' ? 'Pending' : 'Confirm'}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleDelete(roster.id)}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
         );
