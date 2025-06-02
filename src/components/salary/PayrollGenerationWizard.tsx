@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,6 +58,8 @@ export const PayrollGenerationWizard = ({ profiles, workingHours, onRefresh }: P
     try {
       setFilterLoading(true);
       
+      console.log('Reloading filtered data with:', { dateRange, statusFilter });
+      
       // Fetch working hours based on date range and status
       const { data: workingHoursData, error: whError } = await supabase
         .from('working_hours')
@@ -73,17 +74,40 @@ export const PayrollGenerationWizard = ({ profiles, workingHours, onRefresh }: P
         .eq('status', statusFilter)
         .order('date', { ascending: false });
 
-      if (whError) throw whError;
+      if (whError) {
+        console.error('Error fetching working hours:', whError);
+        throw whError;
+      }
 
-      setFilteredWorkingHours(workingHoursData || []);
+      console.log('Fetched working hours:', workingHoursData?.length || 0);
+
+      // Type assertion to handle the nested profile data structure
+      const typedWorkingHours = (workingHoursData || []).map(wh => ({
+        ...wh,
+        status: wh.status as 'pending' | 'approved' | 'rejected'
+      })) as WorkingHour[];
+
+      setFilteredWorkingHours(typedWorkingHours);
+
+      // Get unique profile IDs from working hours
+      const profileIdsFromWorkingHours = new Set(typedWorkingHours.map(wh => wh.profile_id));
+      console.log('Profile IDs from working hours:', profileIdsFromWorkingHours.size);
 
       // Filter profiles that have unpaid working hours in the selected date range
       const profilesWithUnpaidHours = profiles.filter(profile => {
-        const profileHours = (workingHoursData || []).filter(wh => 
+        if (!profileIdsFromWorkingHours.has(profile.id)) {
+          return false;
+        }
+
+        const profileHours = typedWorkingHours.filter(wh => 
           wh.profile_id === profile.id
         );
 
-        // Check if any of these hours are already paid (exist in a paid payroll)
+        if (profileHours.length === 0) {
+          return false;
+        }
+
+        // Check if any of these hours are NOT already paid (exist in a paid payroll)
         const hasUnpaidHours = profileHours.some(wh => {
           const isPaid = existingPayrolls.some(payroll => 
             payroll.profile_id === profile.id &&
@@ -97,6 +121,7 @@ export const PayrollGenerationWizard = ({ profiles, workingHours, onRefresh }: P
         return hasUnpaidHours;
       });
 
+      console.log('Profiles with unpaid hours:', profilesWithUnpaidHours.length);
       setFilteredProfiles(profilesWithUnpaidHours);
 
       // Clear selected profiles if they're no longer eligible
@@ -141,7 +166,14 @@ export const PayrollGenerationWizard = ({ profiles, workingHours, onRefresh }: P
         .select('*');
 
       if (error) throw error;
-      setExistingPayrolls(data || []);
+      
+      // Type assertion to handle the status field
+      const typedPayrolls = (data || []).map(payroll => ({
+        ...payroll,
+        status: payroll.status as 'pending' | 'approved' | 'paid'
+      })) as Payroll[];
+      
+      setExistingPayrolls(typedPayrolls);
     } catch (error) {
       console.error('Error fetching existing payrolls:', error);
     }
