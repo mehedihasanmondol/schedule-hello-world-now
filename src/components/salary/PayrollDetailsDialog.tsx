@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { Payroll, BankAccount } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
-import { DollarSign, User, Calendar, CreditCard } from "lucide-react";
+import { DollarSign, User, Calendar, CreditCard, Printer, Download } from "lucide-react";
 
 interface PayrollDetailsDialogProps {
   payroll: Payroll | null;
@@ -83,15 +83,244 @@ export const PayrollDetailsDialog = ({
     }
   };
 
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow || !payroll) return;
+
+    const selectedBank = profileBankAccounts.find(bank => bank.id === selectedBankAccount);
+    const printContent = generatePaySlipHTML(payroll, selectedBank);
+    
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
+  const handleDownloadPDF = () => {
+    if (!payroll) return;
+    
+    const selectedBank = profileBankAccounts.find(bank => bank.id === selectedBankAccount);
+    const printContent = generatePaySlipHTML(payroll, selectedBank);
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Use browser's print to PDF functionality
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  };
+
+  const generatePaySlipHTML = (payroll: Payroll, bankAccount?: BankAccount) => {
+    const currentDate = new Date().toLocaleDateString();
+    const payPeriodStart = new Date(payroll.pay_period_start).toLocaleDateString();
+    const payPeriodEnd = new Date(payroll.pay_period_end).toLocaleDateString();
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Pay Slip - ${payroll.profiles?.full_name}</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 20px; 
+              color: #333;
+              line-height: 1.4;
+            }
+            .header { 
+              text-align: center; 
+              border-bottom: 2px solid #333; 
+              padding-bottom: 20px; 
+              margin-bottom: 30px;
+            }
+            .company-name { 
+              font-size: 24px; 
+              font-weight: bold; 
+              margin-bottom: 5px;
+            }
+            .pay-slip-title { 
+              font-size: 18px; 
+              color: #666;
+            }
+            .employee-info, .pay-details, .bank-details { 
+              margin-bottom: 25px;
+            }
+            .section-title { 
+              font-size: 16px; 
+              font-weight: bold; 
+              border-bottom: 1px solid #ccc; 
+              padding-bottom: 5px; 
+              margin-bottom: 15px;
+              color: #444;
+            }
+            .info-grid { 
+              display: grid; 
+              grid-template-columns: 1fr 1fr; 
+              gap: 15px;
+            }
+            .info-item { 
+              display: flex; 
+              justify-content: space-between;
+              padding: 8px 0;
+              border-bottom: 1px dotted #ddd;
+            }
+            .label { 
+              font-weight: bold; 
+              color: #555;
+            }
+            .value { 
+              color: #333;
+            }
+            .net-pay { 
+              background: #f0f8f0; 
+              padding: 15px; 
+              border-radius: 5px; 
+              text-align: center; 
+              margin: 20px 0;
+              border: 2px solid #4CAF50;
+            }
+            .net-pay-amount { 
+              font-size: 28px; 
+              font-weight: bold; 
+              color: #2E7D32;
+            }
+            .footer { 
+              margin-top: 40px; 
+              text-align: center; 
+              font-size: 12px; 
+              color: #777;
+              border-top: 1px solid #ccc;
+              padding-top: 20px;
+            }
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-name">Your Company Name</div>
+            <div class="pay-slip-title">PAYROLL STATEMENT</div>
+            <div style="font-size: 14px; color: #666; margin-top: 10px;">
+              Generated: ${currentDate}
+            </div>
+          </div>
+
+          <div class="employee-info">
+            <div class="section-title">Employee Information</div>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">Employee Name:</span>
+                <span class="value">${payroll.profiles?.full_name || 'N/A'}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Employee ID:</span>
+                <span class="value">${payroll.profile_id.substring(0, 8)}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Role:</span>
+                <span class="value">${payroll.profiles?.role || 'N/A'}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Employment Type:</span>
+                <span class="value">${payroll.profiles?.employment_type || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pay-details">
+            <div class="section-title">Pay Period & Earnings</div>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">Pay Period:</span>
+                <span class="value">${payPeriodStart} - ${payPeriodEnd}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Total Hours:</span>
+                <span class="value">${payroll.total_hours.toFixed(1)} hours</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Hourly Rate:</span>
+                <span class="value">$${payroll.hourly_rate.toFixed(2)}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Gross Pay:</span>
+                <span class="value">$${payroll.gross_pay.toFixed(2)}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Deductions:</span>
+                <span class="value" style="color: #d32f2f;">-$${payroll.deductions.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="net-pay">
+            <div style="font-size: 16px; margin-bottom: 10px;">NET PAY</div>
+            <div class="net-pay-amount">$${payroll.net_pay.toFixed(2)}</div>
+          </div>
+
+          ${bankAccount ? `
+          <div class="bank-details">
+            <div class="section-title">Payment Details</div>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">Bank Name:</span>
+                <span class="value">${bankAccount.bank_name}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Account Holder:</span>
+                <span class="value">${bankAccount.account_holder_name}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Account Number:</span>
+                <span class="value">${bankAccount.account_number}</span>
+              </div>
+              ${bankAccount.bsb_code ? `
+              <div class="info-item">
+                <span class="label">BSB Code:</span>
+                <span class="value">${bankAccount.bsb_code}</span>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+          ` : ''}
+
+          <div class="footer">
+            <p>This is a computer-generated payroll statement and does not require a signature.</p>
+            <p>For any queries regarding this payroll, please contact the HR department.</p>
+          </div>
+        </body>
+      </html>
+    `;
+  };
+
   if (!payroll) return null;
 
   const selectedBank = profileBankAccounts.find(bank => bank.id === selectedBankAccount);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Payroll Details - {payroll.profiles?.full_name}</DialogTitle>
+          <DialogTitle className="flex items-center justify-between">
+            <span>Payroll Details - {payroll.profiles?.full_name}</span>
+            <div className="flex gap-2">
+              <Button onClick={handlePrint} variant="outline" size="sm">
+                <Printer className="h-4 w-4 mr-2" />
+                Print
+              </Button>
+              <Button onClick={handleDownloadPDF} variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Save as PDF
+              </Button>
+            </div>
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -180,7 +409,7 @@ export const PayrollDetailsDialog = ({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <CreditCard className="h-5 w-5" />
-                Payment Account
+                Recommended Payment Account
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -203,21 +432,25 @@ export const PayrollDetailsDialog = ({
               </div>
 
               {selectedBank && (
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium mb-2">Bank Account Details</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <h4 className="font-medium mb-3 text-green-800">Recommended Bank Account Details</h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <span className="text-gray-600">Bank:</span> {selectedBank.bank_name}
+                      <span className="text-gray-600">Bank:</span> 
+                      <span className="font-medium ml-2">{selectedBank.bank_name}</span>
                     </div>
                     <div>
-                      <span className="text-gray-600">Account:</span> {selectedBank.account_number}
+                      <span className="text-gray-600">Account:</span> 
+                      <span className="font-medium ml-2">{selectedBank.account_number}</span>
                     </div>
                     <div>
-                      <span className="text-gray-600">Holder:</span> {selectedBank.account_holder_name}
+                      <span className="text-gray-600">Holder:</span> 
+                      <span className="font-medium ml-2">{selectedBank.account_holder_name}</span>
                     </div>
                     {selectedBank.bsb_code && (
                       <div>
-                        <span className="text-gray-600">BSB:</span> {selectedBank.bsb_code}
+                        <span className="text-gray-600">BSB:</span> 
+                        <span className="font-medium ml-2">{selectedBank.bsb_code}</span>
                       </div>
                     )}
                   </div>
