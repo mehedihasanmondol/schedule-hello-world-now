@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
@@ -11,6 +12,7 @@ import { PayrollComponent } from "@/components/Payroll";
 import { Notifications } from "@/components/Notifications";
 import { Reports } from "@/components/Reports";
 import { BankBalance } from "@/components/BankBalance";
+import { SalaryManagement } from "@/components/SalaryManagement";
 import { RolePermissionsManager } from "@/components/RolePermissionsManager";
 import { UserMenu } from "@/components/UserMenu";
 import { RoleDashboardRouter } from "@/components/RoleDashboardRouter";
@@ -41,6 +43,8 @@ const Index = () => {
         return <RosterReport />;
       case "payroll":
         return <PayrollComponent />;
+      case "salary":
+        return <SalaryManagement />;
       case "notifications":
         return <Notifications />;
       case "reports":

@@ -30,7 +30,7 @@ export const WorkingHours = () => {
     profile_id: "",
     client_id: "",
     project_id: "",
-    date: "",
+    date: new Date().toISOString().split('T')[0], // Auto-fill with today's date
     start_time: "",
     end_time: "",
     sign_in_time: "",
@@ -40,40 +40,22 @@ export const WorkingHours = () => {
     status: "pending"
   });
 
-  // Helper functions for formatting dates and times
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const formatTime = (timeString: string) => {
-    if (!timeString) return 'N/A';
-    const [hours, minutes] = timeString.split(':');
-    const time = new Date();
-    time.setHours(parseInt(hours), parseInt(minutes));
-    return time.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const formatTimeRange = (startTime: string, endTime: string) => {
-    if (!startTime || !endTime) return 'Not set';
-    return `${formatTime(startTime)} - ${formatTime(endTime)}`;
-  };
-
   useEffect(() => {
     fetchWorkingHours();
     fetchProfiles();
     fetchClients();
     fetchProjects();
   }, []);
+
+  // Auto-fill today's date when dialog opens
+  useEffect(() => {
+    if (isDialogOpen && !editingWorkingHour) {
+      setFormData(prev => ({
+        ...prev,
+        date: new Date().toISOString().split('T')[0]
+      }));
+    }
+  }, [isDialogOpen, editingWorkingHour]);
 
   const fetchWorkingHours = async () => {
     try {
@@ -178,16 +160,18 @@ export const WorkingHours = () => {
       const totalHours = calculateTotalHours(formData.start_time, formData.end_time);
       const actualHours = calculateActualHours(formData.sign_in_time, formData.sign_out_time);
       const overtimeHours = Math.max(0, actualHours - totalHours);
-      const payableAmount = actualHours * formData.hourly_rate;
+      const payableAmount = (actualHours || totalHours) * formData.hourly_rate;
       
       const { error } = await supabase
         .from('working_hours')
         .insert([{
           ...formData,
           total_hours: totalHours,
-          actual_hours: actualHours,
+          actual_hours: actualHours || null,
           overtime_hours: overtimeHours,
-          payable_amount: payableAmount
+          payable_amount: payableAmount,
+          sign_in_time: formData.sign_in_time || null,
+          sign_out_time: formData.sign_out_time || null
         }]);
 
       if (error) throw error;
@@ -198,7 +182,7 @@ export const WorkingHours = () => {
         profile_id: "",
         client_id: "",
         project_id: "",
-        date: "",
+        date: new Date().toISOString().split('T')[0], // Reset to today's date
         start_time: "",
         end_time: "",
         sign_in_time: "",
@@ -287,7 +271,7 @@ export const WorkingHours = () => {
                   setFormData({ 
                     ...formData, 
                     profile_id: profileId,
-                    hourly_rate: profile?.hourly_rate || 0
+                    hourly_rate: profile?.hourly_rate || 0 // Auto-suggest hourly rate
                   });
                 }}
                 label="Select Profile"
@@ -366,7 +350,7 @@ export const WorkingHours = () => {
                 </div>
 
                 <div className="border-t pt-4">
-                  <h4 className="font-medium text-gray-900 mb-2">Actual Hours</h4>
+                  <h4 className="font-medium text-gray-900 mb-2">Actual Hours (Optional)</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="sign_in_time">Sign In Time</Label>
@@ -375,6 +359,7 @@ export const WorkingHours = () => {
                         type="time"
                         value={formData.sign_in_time}
                         onChange={(e) => setFormData({ ...formData, sign_in_time: e.target.value })}
+                        placeholder="Optional"
                       />
                     </div>
                     <div>
@@ -384,6 +369,7 @@ export const WorkingHours = () => {
                         type="time"
                         value={formData.sign_out_time}
                         onChange={(e) => setFormData({ ...formData, sign_out_time: e.target.value })}
+                        placeholder="Optional"
                       />
                     </div>
                   </div>
@@ -521,11 +507,11 @@ export const WorkingHours = () => {
                       </div>
                     </td>
                     <td className="py-3 px-4 text-gray-600">
-                      {formatDate(wh.date)}
+                      {new Date(wh.date).toLocaleDateString()}
                     </td>
                     <td className="py-3 px-4 text-gray-600">
                       <div className="text-sm">
-                        {formatTimeRange(wh.start_time, wh.end_time)}
+                        {wh.start_time} - {wh.end_time}
                         <div className="text-xs text-gray-500">{wh.total_hours}h</div>
                       </div>
                     </td>
@@ -533,7 +519,7 @@ export const WorkingHours = () => {
                       <div className="text-sm">
                         {wh.sign_in_time && wh.sign_out_time ? (
                           <>
-                            {formatTimeRange(wh.sign_in_time, wh.sign_out_time)}
+                            {wh.sign_in_time} - {wh.sign_out_time}
                             <div className="text-xs text-gray-500">{wh.actual_hours || 0}h</div>
                           </>
                         ) : (
