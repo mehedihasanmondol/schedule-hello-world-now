@@ -15,7 +15,7 @@ import { EditWorkingHoursDialog } from "@/components/EditWorkingHoursDialog";
 
 export const WorkingHours = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [workingHours, setWorkingHours] = useState<WorkingHourType[]>([]);
+  const [workingHours, setWorkingHours] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -23,7 +23,7 @@ export const WorkingHours = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedWorkingHour, setSelectedWorkingHour] = useState<WorkingHourType | null>(null);
+  const [selectedWorkingHour, setSelectedWorkingHour] = useState<any>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -62,7 +62,7 @@ export const WorkingHours = () => {
         .order('date', { ascending: false });
 
       if (error) throw error;
-      setWorkingHours(data as WorkingHourType[]);
+      setWorkingHours(data || []);
     } catch (error) {
       console.error('Error fetching working hours:', error);
       toast({
@@ -189,7 +189,7 @@ export const WorkingHours = () => {
     }
   };
 
-  const handleEditClick = (workingHour: WorkingHourType) => {
+  const handleEditClick = (workingHour: any) => {
     setSelectedWorkingHour(workingHour);
     setIsEditDialogOpen(true);
   };
@@ -422,12 +422,10 @@ export const WorkingHours = () => {
             setSelectedWorkingHour(null);
           }}
           workingHour={selectedWorkingHour}
-          fetchWorkingHours={fetchWorkingHours}
+          onUpdate={fetchWorkingHours}
           profiles={profiles}
           clients={clients}
           projects={projects}
-          rosters={rosters}
-          toast={toast}
         />
       )}
     </div>

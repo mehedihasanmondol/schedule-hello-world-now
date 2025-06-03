@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,12 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { WorkingHour, Profile, Client, Project, WorkingHoursStatus } from "@/types/database";
+import { Profile, Client, Project, WorkingHoursStatus } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { ProfileSelector } from "@/components/common/ProfileSelector";
 
 interface EditWorkingHoursDialogProps {
-  workingHour: WorkingHour | null;
+  workingHour: any;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: () => void;
