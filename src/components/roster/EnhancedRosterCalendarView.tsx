@@ -202,9 +202,9 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
                           <Tooltip>
                             <TooltipTrigger className="flex items-center gap-1 text-orange-600">
                               <span className="text-xs font-bold">$</span>
-                              <span className="font-medium">{roster.per_hour_rate || 0}</span>
+                              <span className="font-medium">{(roster.per_hour_rate || 0).toFixed(2)}</span>
                             </TooltipTrigger>
-                            <TooltipContent>Per Hour</TooltipContent>
+                            <TooltipContent>Per Hour Rate</TooltipContent>
                           </Tooltip>
                         </div>
 
