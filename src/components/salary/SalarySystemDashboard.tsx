@@ -1,196 +1,186 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Search, DollarSign, Users, FileText, Calendar } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calculator, Users, DollarSign, Calendar, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Payroll, Profile, BankAccount } from "@/types/database";
+import { Payroll, Profile, WorkingHour, BankTransaction } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
-import { PayrollManagement } from "@/components/salary/PayrollManagement";
+import { PayrollGenerationWizard } from "./PayrollGenerationWizard";
+import { SalarySheetManager } from "./SalarySheetManager";
+import { SalaryReports } from "./SalaryReports";
 
 export const SalarySystemDashboard = () => {
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
+  const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchData();
+    fetchAllData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchAllData = async () => {
     try {
       setLoading(true);
-      await Promise.all([fetchPayrolls(), fetchProfiles()]);
-    } catch (error) {
-      console.error("Error fetching data:", error);
+      
+      const [payrollsRes, profilesRes, workingHoursRes, transactionsRes] = await Promise.all([
+        supabase.from('payroll').select(`
+          *,
+          profiles!payroll_profile_id_fkey (id, full_name, email, role, hourly_rate, salary),
+          bank_accounts (id, bank_name, account_number)
+        `).order('created_at', { ascending: false }),
+        
+        supabase.from('profiles').select('*').eq('is_active', true).order('full_name'),
+        
+        supabase.from('working_hours').select(`
+          *,
+          profiles!working_hours_profile_id_fkey (id, full_name, role, hourly_rate),
+          clients!working_hours_client_id_fkey (id, name, company),
+          projects!working_hours_project_id_fkey (id, name)
+        `).eq('status', 'approved').order('date', { ascending: false }),
+        
+        supabase.from('bank_transactions').select(`
+          *,
+          profiles!bank_transactions_profile_id_fkey (id, full_name),
+          bank_accounts (id, bank_name, account_number)
+        `).eq('category', 'salary').order('date', { ascending: false })
+      ]);
+
+      if (payrollsRes.error) throw payrollsRes.error;
+      if (profilesRes.error) throw profilesRes.error;
+      if (workingHoursRes.error) throw workingHoursRes.error;
+      if (transactionsRes.error) throw transactionsRes.error;
+
+      setPayrolls(payrollsRes.data as Payroll[]);
+      setProfiles(profilesRes.data as Profile[]);
+      setWorkingHours(workingHoursRes.data as WorkingHour[]);
+      setBankTransactions(transactionsRes.data as BankTransaction[]);
+    } catch (error: any) {
+      console.error('Error fetching salary data:', error);
       toast({
         title: "Error",
-        description: "Failed to load salary system data",
-        variant: "destructive",
+        description: "Failed to fetch salary system data",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchPayrolls = async () => {
-    const { data, error } = await supabase
-      .from("payroll")
-      .select(`
-        *,
-        profiles!payroll_profile_id_fkey (id, full_name, role, hourly_rate),
-        bank_accounts!payroll_bank_account_id_fkey (id, account_number, bank_name)
-      `)
-      .order("created_at", { ascending: false });
+  const totalPayroll = payrolls.reduce((sum, p) => sum + p.net_pay, 0);
+  const totalHours = workingHours.reduce((sum, wh) => sum + wh.total_hours, 0);
+  const totalSalaryTransactions = bankTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const pendingPayrolls = payrolls.filter(p => p.status === 'pending').length;
 
-    if (error) throw error;
-
-    const payrollData = (data || []).map((payroll) => ({
-      ...payroll,
-      profiles: Array.isArray(payroll.profiles)
-        ? payroll.profiles[0]
-        : payroll.profiles,
-      bank_accounts: Array.isArray(payroll.bank_accounts)
-        ? payroll.bank_accounts[0]
-        : payroll.bank_accounts,
-    }));
-
-    setPayrolls(payrollData as Payroll[]);
-  };
-
-  const fetchProfiles = async () => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("is_active", true)
-      .order("full_name");
-
-    if (error) throw error;
-    setProfiles(data as Profile[]);
-  };
-
-  if (loading && payrolls.length === 0) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading salary system...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <DollarSign className="h-8 w-8 text-green-600" />
+          <Calculator className="h-8 w-8 text-green-600" />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Salary System</h1>
-            <p className="text-gray-600">Manage employee salaries and payroll</p>
+            <h1 className="text-3xl font-bold text-gray-900">Comprehensive Salary System</h1>
+            <p className="text-gray-600">Manage payroll, salary sheets, and reports</p>
           </div>
         </div>
-        <Button onClick={fetchData}>Refresh Data</Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Enhanced Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Total Payroll</CardTitle>
-            <DollarSign className="h-5 w-5 text-green-600" />
+            <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">
-              ${payrolls.reduce((sum, p) => sum + p.gross_pay, 0).toLocaleString()}
-            </div>
+            <div className="text-2xl font-bold text-green-600">${totalPayroll.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Net pay amount</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Active Employees</CardTitle>
-            <Users className="h-5 w-5 text-blue-600" />
+            <CardTitle className="text-sm font-medium text-gray-600">Total Hours</CardTitle>
+            <Calendar className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{profiles.length}</div>
+            <div className="text-2xl font-bold text-blue-600">{totalHours.toFixed(1)}</div>
+            <p className="text-xs text-muted-foreground">Approved hours</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Active Profiles</CardTitle>
+            <Users className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{profiles.length}</div>
+            <p className="text-xs text-muted-foreground">Team members</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Pending Payrolls</CardTitle>
-            <Calendar className="h-5 w-5 text-orange-600" />
+            <FileText className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">
-              {payrolls.filter((p) => p.status === "pending").length}
-            </div>
+            <div className="text-2xl font-bold text-orange-600">{pendingPayrolls}</div>
+            <p className="text-xs text-muted-foreground">Require processing</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Salary Payments</CardTitle>
+            <DollarSign className="h-4 w-4 text-emerald-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600">${totalSalaryTransactions.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Bank transactions</p>
           </CardContent>
         </Card>
       </div>
 
-      <PayrollManagement payrolls={payrolls} profiles={profiles} onRefresh={fetchData} />
+      <Tabs defaultValue="salary-sheets" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="salary-sheets">Salary Sheets</TabsTrigger>
+          <TabsTrigger value="payroll-generation">Payroll Generation</TabsTrigger>
+          <TabsTrigger value="reports">Reports & Analytics</TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Salary Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Employee</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Role</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Hourly Rate</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Monthly Salary</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">YTD Earnings</th>
-                </tr>
-              </thead>
-              <tbody>
-                {profiles.map((profile) => {
-                  const profilePayrolls = payrolls.filter(
-                    (p) => p.profile_id === profile.id
-                  );
-                  const ytdEarnings = profilePayrolls.reduce(
-                    (sum, p) => sum + p.net_pay,
-                    0
-                  );
-                  const monthlySalary = profile.hourly_rate
-                    ? profile.hourly_rate * 160
-                    : profile.salary || 0;
+        <TabsContent value="salary-sheets">
+          <SalarySheetManager 
+            payrolls={payrolls}
+            profiles={profiles}
+            onRefresh={fetchAllData}
+          />
+        </TabsContent>
 
-                  return (
-                    <tr
-                      key={profile.id}
-                      className="border-b border-gray-100 hover:bg-gray-50"
-                    >
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-gray-900">
-                          {profile.full_name}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {profile.email}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">
-                        {profile.role}
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">
-                        ${profile.hourly_rate?.toFixed(2) || "N/A"}
-                      </td>
-                      <td className="py-3 px-4 text-gray-900 font-medium">
-                        ${monthlySalary.toFixed(2)}
-                      </td>
-                      <td className="py-3 px-4 text-green-600 font-bold">
-                        ${ytdEarnings.toFixed(2)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="payroll-generation">
+          <PayrollGenerationWizard 
+            profiles={profiles}
+            workingHours={workingHours}
+            onRefresh={fetchAllData}
+          />
+        </TabsContent>
+
+        <TabsContent value="reports">
+          <SalaryReports 
+            payrolls={payrolls}
+            workingHours={workingHours}
+            bankTransactions={bankTransactions}
+            profiles={profiles}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
