@@ -54,7 +54,7 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
     return acc;
   }, {} as Record<string, Roster[]>);
 
-  // Format time to human readable
+  // Format time to human readable (12-hour format)
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(':');
     const hour = parseInt(hours);
@@ -74,7 +74,7 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
     return startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // Calculate progress percentage
+  // Calculate progress percentage for assigned vs expected profiles
   const getProgressPercentage = (assigned: number, expected: number) => {
     if (expected === 0) return 0;
     return Math.min((assigned / expected) * 100, 100);
@@ -157,7 +157,7 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
                           </Badge>
                         </div>
 
-                        {/* Time */}
+                        {/* Human readable time */}
                         <div className="text-xs text-gray-600 flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {formatTime(roster.start_time)} - {formatTime(roster.end_time)}
@@ -173,8 +173,8 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
                           </div>
                         </div>
 
-                        {/* Metrics Row with Icons and Tooltips */}
-                        <div className="flex items-center justify-between text-xs">
+                        {/* Metrics Row with Icons and Tooltips - Icons and values side by side */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
                           <Tooltip>
                             <TooltipTrigger className="flex items-center gap-1 text-purple-600">
                               <Clock className="h-3 w-3" />
@@ -196,19 +196,19 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
                               <DollarSign className="h-3 w-3" />
                               <span className="font-medium">${estimatedValue.toFixed(2)}</span>
                             </TooltipTrigger>
-                            <TooltipContent>Est. Value</TooltipContent>
+                            <TooltipContent>Estimated Value</TooltipContent>
                           </Tooltip>
 
                           <Tooltip>
                             <TooltipTrigger className="flex items-center gap-1 text-orange-600">
                               <span className="text-xs font-bold">$</span>
-                              <span className="font-medium">{roster.per_hour_rate || 0}</span>
+                              <span className="font-medium">{(roster.per_hour_rate || 0).toFixed(2)}</span>
                             </TooltipTrigger>
-                            <TooltipContent>Per Hour</TooltipContent>
+                            <TooltipContent>Per Hour Rate</TooltipContent>
                           </Tooltip>
                         </div>
 
-                        {/* Progress Bar */}
+                        {/* Progress Bar between estimated and assigned */}
                         <div className="space-y-1">
                           <div className="flex justify-between text-xs">
                             <span className="text-gray-600">Team Progress</span>
