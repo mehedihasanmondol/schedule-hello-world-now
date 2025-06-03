@@ -54,9 +54,8 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
     return acc;
   }, {} as Record<string, Roster[]>);
 
-  // Format time to human readable (12-hour format)
+  // Format time to human readable
   const formatTime = (time: string) => {
-    if (!time) return '';
     const [hours, minutes] = time.split(':');
     const hour = parseInt(hours);
     const ampm = hour >= 12 ? 'PM' : 'AM';
@@ -64,7 +63,7 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
-  // Format date range for multi-day rosters with highlighting
+  // Format date range for multi-day rosters
   const formatDateRange = (roster: Roster) => {
     const startDate = new Date(roster.date);
     const endDate = roster.end_date ? new Date(roster.end_date) : startDate;
@@ -75,7 +74,7 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
     return startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // Calculate progress percentage for assigned vs expected
+  // Calculate progress percentage
   const getProgressPercentage = (assigned: number, expected: number) => {
     if (expected === 0) return 0;
     return Math.min((assigned / expected) * 100, 100);
@@ -107,7 +106,7 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
           </div>
         </div>
 
-        {/* Calendar Grid - Weekly View */}
+        {/* Calendar Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {Object.entries(rostersByDate).map(([date, dateRosters]) => (
             <div key={date} className="space-y-3">
@@ -135,15 +134,15 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
                   <Card key={roster.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
                       <div className="space-y-3">
-                        {/* Header with status and highlighted date range */}
+                        {/* Header with status and date range */}
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <h4 className="font-medium text-sm line-clamp-2">
                               {roster.name || 'Unnamed Roster'}
                             </h4>
                             {(roster.end_date && roster.end_date !== roster.date) && (
-                              <div className="text-xs text-blue-600 font-medium mt-1 bg-blue-50 px-2 py-1 rounded border border-blue-200">
-                                📅 {formatDateRange(roster)}
+                              <div className="text-xs text-blue-600 font-medium mt-1 bg-blue-50 px-2 py-1 rounded">
+                                {formatDateRange(roster)}
                               </div>
                             )}
                           </div>
@@ -158,7 +157,7 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
                           </Badge>
                         </div>
 
-                        {/* Human readable time format */}
+                        {/* Time */}
                         <div className="text-xs text-gray-600 flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {formatTime(roster.start_time)} - {formatTime(roster.end_time)}
@@ -174,8 +173,8 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
                           </div>
                         </div>
 
-                        {/* Finance and Team Metrics with Icons and Tooltips */}
-                        <div className="grid grid-cols-2 gap-3 text-xs">
+                        {/* Metrics Row with Icons and Tooltips */}
+                        <div className="flex items-center justify-between text-xs">
                           <Tooltip>
                             <TooltipTrigger className="flex items-center gap-1 text-purple-600">
                               <Clock className="h-3 w-3" />
@@ -197,33 +196,30 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
                               <DollarSign className="h-3 w-3" />
                               <span className="font-medium">${estimatedValue.toFixed(2)}</span>
                             </TooltipTrigger>
-                            <TooltipContent>Total Finance Value</TooltipContent>
+                            <TooltipContent>Est. Value</TooltipContent>
                           </Tooltip>
 
                           <Tooltip>
                             <TooltipTrigger className="flex items-center gap-1 text-orange-600">
                               <span className="text-xs font-bold">$</span>
-                              <span className="font-medium">{(roster.per_hour_rate || 0).toFixed(2)}</span>
+                              <span className="font-medium">{roster.per_hour_rate || 0}</span>
                             </TooltipTrigger>
-                            <TooltipContent>Per Hour Rate</TooltipContent>
+                            <TooltipContent>Per Hour</TooltipContent>
                           </Tooltip>
                         </div>
 
-                        {/* Progress Bar between Estimated and Assigned */}
-                        <div className="space-y-2">
+                        {/* Progress Bar */}
+                        <div className="space-y-1">
                           <div className="flex justify-between text-xs">
                             <span className="text-gray-600">Team Progress</span>
                             <span className="text-gray-600">
-                              {assignedCount}/{expectedCount} Expected
+                              {assignedCount}/{expectedCount}
                             </span>
                           </div>
                           <Progress 
                             value={progressPercentage} 
                             className="h-2"
                           />
-                          <div className="text-xs text-center text-gray-500">
-                            {progressPercentage.toFixed(0)}% Complete
-                          </div>
                         </div>
 
                         {/* Team Members */}
@@ -235,7 +231,7 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
                           ))}
                           {(roster.roster_profiles?.length || 0) > 2 && (
                             <Badge variant="outline" className="text-xs">
-                              +{(roster.roster_profiles?.length || 0) - 2} more
+                              +{(roster.roster_profiles?.length || 0) - 2}
                             </Badge>
                           )}
                         </div>
@@ -248,7 +244,6 @@ export const EnhancedRosterCalendarView = ({ rosters }: EnhancedRosterCalendarVi
           ))}
         </div>
 
-        {/* Empty State */}
         {Object.keys(rostersByDate).length === 0 && (
           <div className="text-center py-12 text-gray-500">
             <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
