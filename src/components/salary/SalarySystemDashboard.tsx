@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Payroll, Profile, WorkingHour, BankTransaction } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { PayrollGenerationWizard } from "./PayrollGenerationWizard";
+import { SalarySheetManager } from "./SalarySheetManager";
 import { SalaryReports } from "./SalaryReports";
 
 export const SalarySystemDashboard = () => {
@@ -155,14 +157,11 @@ export const SalarySystemDashboard = () => {
         </TabsList>
 
         <TabsContent value="salary-sheets">
-          <Card>
-            <CardHeader>
-              <CardTitle>Salary Sheets Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Salary sheets functionality will be implemented here.</p>
-            </CardContent>
-          </Card>
+          <SalarySheetManager 
+            payrolls={payrolls}
+            profiles={profiles}
+            onRefresh={fetchAllData}
+          />
         </TabsContent>
 
         <TabsContent value="payroll-generation">

@@ -9,20 +9,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, Clock, Users, DollarSign, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { WorkingHour, Profile, Client, Project, Roster } from "@/types/database";
+import { WorkingHours as WorkingHoursType, Profile, Client, Project, Roster } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { EditWorkingHoursDialog } from "@/components/EditWorkingHoursDialog";
 
-export const WorkingHoursComponent = () => {
+export const WorkingHours = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
+  const [workingHours, setWorkingHours] = useState<WorkingHoursType[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [rosters, setRosters] = useState<Roster[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingHours, setEditingHours] = useState<WorkingHour | null>(null);
+  const [editingHours, setEditingHours] = useState<WorkingHoursType | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -67,7 +67,7 @@ export const WorkingHoursComponent = () => {
         .order('date', { ascending: false });
 
       if (error) throw error;
-      setWorkingHours(data as WorkingHour[]);
+      setWorkingHours(data as WorkingHoursType[]);
     } catch (error) {
       console.error('Error fetching working hours:', error);
       toast({
@@ -598,7 +598,7 @@ export const WorkingHoursComponent = () => {
       <EditWorkingHoursDialog
         isOpen={editingHours !== null}
         onClose={() => setEditingHours(null)}
-        workingHour={editingHours}
+        workingHours={editingHours}
         fetchWorkingHours={fetchWorkingHours}
         profiles={profiles}
         clients={clients}
@@ -609,5 +609,3 @@ export const WorkingHoursComponent = () => {
     </div>
   );
 };
-
-export const WorkingHours = WorkingHoursComponent;
