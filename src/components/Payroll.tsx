@@ -11,8 +11,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Payroll as PayrollType, Profile, BankAccount } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { PayrollDetailsDialog } from "@/components/salary/PayrollDetailsDialog";
+import { ProfileSelector } from "@/components/common/ProfileSelector";
 
-export const Payroll = () => {
+export const PayrollComponent = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [payrolls, setPayrolls] = useState<PayrollType[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -216,6 +217,7 @@ export const Payroll = () => {
         gross_pay: 0,
         deductions: 0,
         net_pay: 0,
+        bank_account_id: "",
         status: "pending"
       });
       
@@ -543,3 +545,5 @@ export const Payroll = () => {
     </div>
   );
 };
+
+export const Payroll = PayrollComponent;
