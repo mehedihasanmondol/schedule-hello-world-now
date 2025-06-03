@@ -2,27 +2,28 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, Clock, Users, DollarSign, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { WorkingHours as WorkingHoursType, Profile, Client, Project, Roster } from "@/types/database";
+import { WorkingHour, Profile, Client, Project, Roster } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { EditWorkingHoursDialog } from "@/components/EditWorkingHoursDialog";
 
 export const WorkingHours = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [workingHours, setWorkingHours] = useState<WorkingHoursType[]>([]);
+  const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [rosters, setRosters] = useState<Roster[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingHours, setEditingHours] = useState<WorkingHoursType | null>(null);
+  const [editingWorkingHour, setEditingWorkingHour] = useState<WorkingHour | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -67,7 +68,7 @@ export const WorkingHours = () => {
         .order('date', { ascending: false });
 
       if (error) throw error;
-      setWorkingHours(data as WorkingHoursType[]);
+      setWorkingHours(data as WorkingHour[]);
     } catch (error) {
       console.error('Error fetching working hours:', error);
       toast({
@@ -553,7 +554,7 @@ export const WorkingHours = () => {
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => setEditingHours(hours)}
+                          onClick={() => setEditingWorkingHour(hours)}
                         >
                           Edit
                         </Button>
@@ -596,9 +597,12 @@ export const WorkingHours = () => {
       </Card>
 
       <EditWorkingHoursDialog
-        isOpen={editingHours !== null}
-        onClose={() => setEditingHours(null)}
-        workingHours={editingHours}
+        isOpen={isEditDialogOpen}
+        onClose={() => {
+          setIsEditDialogOpen(false);
+          setEditingWorkingHour(null);
+        }}
+        workingHour={editingWorkingHour}
         fetchWorkingHours={fetchWorkingHours}
         profiles={profiles}
         clients={clients}
