@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Users, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -117,11 +117,7 @@ export const ProfileManagement = () => {
     }
   ];
 
-  useEffect(() => {
-    fetchProfiles();
-  }, [filters, tableData.page, tableData.pageSize]);
-
-  const fetchProfiles = async () => {
+  const fetchProfiles = useCallback(async () => {
     setLoading(true);
     try {
       let query = supabase
@@ -166,20 +162,24 @@ export const ProfileManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters.search, filters.sortBy, filters.sortOrder, tableData.page, tableData.pageSize, toast]);
 
-  const handleFiltersChange = (newFilters: TableFilters) => {
+  useEffect(() => {
+    fetchProfiles();
+  }, [fetchProfiles]);
+
+  const handleFiltersChange = useCallback((newFilters: TableFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
     setTableData(prev => ({ ...prev, page: 1 }));
-  };
+  }, []);
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     setTableData(prev => ({ ...prev, page }));
-  };
+  }, []);
 
-  const handlePageSizeChange = (pageSize: number) => {
+  const handlePageSizeChange = useCallback((pageSize: number) => {
     setTableData(prev => ({ ...prev, pageSize, page: 1 }));
-  };
+  }, []);
 
   const handleExport = async (options: ExportOptions) => {
     // Implementation for export functionality

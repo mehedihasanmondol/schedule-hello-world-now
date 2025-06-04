@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,9 +14,17 @@ import { useToast } from "@/hooks/use-toast";
 import { DataTable } from "./common/DataTable/DataTable";
 import { Column, TableData, TableFilters, ExportOptions } from "./common/DataTable/types";
 
+interface ProjectWithClient extends Omit<Project, 'clients'> {
+  clients: {
+    id: string;
+    name: string;
+    company: string;
+  } | null;
+}
+
 export const ProjectManagement = () => {
   const [clients, setClients] = useState<Client[]>([]);
-  const [tableData, setTableData] = useState<TableData<Project>>({
+  const [tableData, setTableData] = useState<TableData<ProjectWithClient>>({
     data: [],
     total: 0,
     page: 1,
@@ -44,7 +52,7 @@ export const ProjectManagement = () => {
     budget: 0
   });
 
-  const columns: Column<Project>[] = [
+  const columns: Column<ProjectWithClient>[] = [
     {
       key: 'name',
       label: 'Project Name',
@@ -118,19 +126,14 @@ export const ProjectManagement = () => {
     }
   ];
 
-  useEffect(() => {
-    fetchProjects();
-    fetchClients();
-  }, [filters, tableData.page, tableData.pageSize]);
-
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     setLoading(true);
     try {
       let query = supabase
         .from('projects')
         .select(`
           *,
-          clients (
+          clients!projects_client_id_fkey (
             id,
             name,
             company
@@ -160,7 +163,7 @@ export const ProjectManagement = () => {
 
       setTableData(prev => ({
         ...prev,
-        data: data || [],
+        data: (data || []) as ProjectWithClient[],
         total: count || 0,
         hasMore: (count || 0) > (tableData.page * tableData.pageSize)
       }));
@@ -174,7 +177,15 @@ export const ProjectManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters.search, filters.sortBy, filters.sortOrder, tableData.page, tableData.pageSize, toast]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  useEffect(() => {
+    fetchClients();
+  }, []);
 
   const fetchClients = async () => {
     try {
@@ -191,18 +202,18 @@ export const ProjectManagement = () => {
     }
   };
 
-  const handleFiltersChange = (newFilters: TableFilters) => {
+  const handleFiltersChange = useCallback((newFilters: TableFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
     setTableData(prev => ({ ...prev, page: 1 }));
-  };
+  }, []);
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     setTableData(prev => ({ ...prev, page }));
-  };
+  }, []);
 
-  const handlePageSizeChange = (pageSize: number) => {
+  const handlePageSizeChange = useCallback((pageSize: number) => {
     setTableData(prev => ({ ...prev, pageSize, page: 1 }));
-  };
+  }, []);
 
   const handleExport = async (options: ExportOptions) => {
     console.log('Export options:', options);
@@ -252,8 +263,8 @@ export const ProjectManagement = () => {
     }
   };
 
-  const handleEdit = (project: Project) => {
-    setEditingProject(project);
+  const handleEdit = (project: ProjectWithClient) => {
+    setEditingProject(project as Project);
     setFormData({
       name: project.name,
       description: project.description || "",

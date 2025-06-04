@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MultipleProfileSelector } from "./common/MultipleProfileSelector";
 import { EnhancedRosterCalendarView } from "./roster/EnhancedRosterCalendarView";
 
-export const Roster = () => {
+export const RosterComponent = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [rosters, setRosters] = useState<RosterType[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -496,4 +496,4 @@ export const Roster = () => {
   );
 };
 
-export default Roster;
+export { RosterComponent as default };
