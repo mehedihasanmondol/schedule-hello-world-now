@@ -1,23 +1,37 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Edit, Trash2, Building2 } from "lucide-react";
+import { Plus, Edit, Trash2, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Client } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
+import { DataTable } from "./common/DataTable/DataTable";
+import { Column, TableData, TableFilters, ExportOptions } from "./common/DataTable/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const ClientManagement = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [clients, setClients] = useState<Client[]>([]);
+  const [tableData, setTableData] = useState<TableData<Client>>({
+    data: [],
+    total: 0,
+    page: 1,
+    pageSize: 10,
+    hasMore: false
+  });
+  const [filters, setFilters] = useState<TableFilters>({
+    search: '',
+    columnFilters: {},
+    sortBy: 'created_at',
+    sortOrder: 'desc'
+  });
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [projectCounts, setProjectCounts] = useState<Record<string, number>>({});
+  const [stats, setStats] = useState({ total: 0, active: 0, totalProjects: 0 });
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -28,21 +42,110 @@ export const ClientManagement = () => {
     status: "active" as "active" | "inactive"
   });
 
+  const columns: Column<Client>[] = [
+    {
+      key: 'company',
+      label: 'Company',
+      sortable: true,
+      filterable: true,
+      render: (value) => <span className="font-medium text-gray-900">{value}</span>
+    },
+    {
+      key: 'name',
+      label: 'Contact',
+      sortable: true,
+      filterable: true
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      sortable: true,
+      filterable: true
+    },
+    {
+      key: 'phone',
+      label: 'Phone',
+      sortable: true,
+      render: (value) => value || '-'
+    },
+    {
+      key: 'projects',
+      label: 'Projects',
+      render: (_, client) => projectCounts[client.id] || 0
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortable: true,
+      filterable: true,
+      render: (value) => (
+        <Badge variant={value === "active" ? "default" : "secondary"}>
+          {value}
+        </Badge>
+      )
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (_, client) => (
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => handleEdit(client)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(client.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )
+    }
+  ];
+
   useEffect(() => {
     fetchClients();
     fetchProjectCounts();
-  }, []);
+  }, [filters, tableData.page, tableData.pageSize]);
 
   const fetchClients = async () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('clients')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' });
+
+      // Apply search filter
+      if (filters.search) {
+        query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,company.ilike.%${filters.search}%`);
+      }
+
+      // Apply sorting
+      if (filters.sortBy) {
+        query = query.order(filters.sortBy, { ascending: filters.sortOrder === 'asc' });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+
+      // Apply pagination
+      const from = (tableData.page - 1) * tableData.pageSize;
+      const to = from + tableData.pageSize - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
-      // Type cast the data to ensure proper typing
-      setClients((data || []) as Client[]);
+
+      setTableData(prev => ({
+        ...prev,
+        data: data || [],
+        total: count || 0,
+        hasMore: (count || 0) > (tableData.page * tableData.pageSize)
+      }));
+
+      // Update stats
+      setStats({
+        total: count || 0,
+        active: data?.filter(c => c.status === 'active').length || 0,
+        totalProjects: Object.values(projectCounts).reduce((sum, count) => sum + count, 0)
+      });
     } catch (error) {
       console.error('Error fetching clients:', error);
       toast({
@@ -71,6 +174,24 @@ export const ClientManagement = () => {
     } catch (error) {
       console.error('Error fetching project counts:', error);
     }
+  };
+
+  const handleFiltersChange = (newFilters: TableFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+    setTableData(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handlePageChange = (page: number) => {
+    setTableData(prev => ({ ...prev, page }));
+  };
+
+  const handlePageSizeChange = (pageSize: number) => {
+    setTableData(prev => ({ ...prev, pageSize, page: 1 }));
+  };
+
+  const handleExport = async (options: ExportOptions) => {
+    console.log('Export options:', options);
+    toast({ title: "Export", description: `Exporting as ${options.format}...` });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -145,18 +266,6 @@ export const ClientManagement = () => {
       });
     }
   };
-
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.company.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const totalProjects = Object.values(projectCounts).reduce((sum, count) => sum + count, 0);
-
-  if (loading && clients.length === 0) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
-  }
 
   return (
     <div className="space-y-6">
@@ -240,7 +349,7 @@ export const ClientManagement = () => {
             <Building2 className="h-5 w-5 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{clients.length}</div>
+            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
           </CardContent>
         </Card>
 
@@ -250,9 +359,7 @@ export const ClientManagement = () => {
             <Building2 className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">
-              {clients.filter(c => c.status === "active").length}
-            </div>
+            <div className="text-2xl font-bold text-gray-900">{stats.active}</div>
           </CardContent>
         </Card>
 
@@ -262,70 +369,23 @@ export const ClientManagement = () => {
             <Building2 className="h-5 w-5 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{totalProjects}</div>
+            <div className="text-2xl font-bold text-gray-900">{stats.totalProjects}</div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Clients</CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search clients..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Company</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Contact</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Email</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Phone</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Projects</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredClients.map((client) => (
-                  <tr key={client.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium text-gray-900">{client.company}</td>
-                    <td className="py-3 px-4 text-gray-600">{client.name}</td>
-                    <td className="py-3 px-4 text-gray-600">{client.email}</td>
-                    <td className="py-3 px-4 text-gray-600">{client.phone || '-'}</td>
-                    <td className="py-3 px-4 text-gray-600">{projectCounts[client.id] || 0}</td>
-                    <td className="py-3 px-4">
-                      <Badge variant={client.status === "active" ? "default" : "secondary"}>
-                        {client.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(client)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(client.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      <DataTable
+        columns={columns}
+        data={tableData}
+        loading={loading}
+        onFiltersChange={handleFiltersChange}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onExport={handleExport}
+        enableExport={true}
+        enableColumnToggle={true}
+        className="w-full"
+      />
     </div>
   );
 };

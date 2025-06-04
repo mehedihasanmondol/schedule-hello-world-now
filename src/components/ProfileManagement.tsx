@@ -1,50 +1,161 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Users, Plus, Search } from "lucide-react";
+import { Users, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
-import { ProfileTable } from "./profile/ProfileTable";
-import { ProfileForm } from "./profile/ProfileForm";
 import { ProfileStats } from "./profile/ProfileStats";
+import { ProfileForm } from "./profile/ProfileForm";
 import { BankAccountManagement } from "./bank/BankAccountManagement";
+import { DataTable } from "./common/DataTable/DataTable";
+import { Column, TableData, TableFilters, ExportOptions } from "./common/DataTable/types";
+import { Badge } from "@/components/ui/badge";
+import { Edit, Trash2, CreditCard } from "lucide-react";
 
 export const ProfileManagement = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [filteredProfiles, setFilteredProfiles] = useState<Profile[]>([]);
+  const [tableData, setTableData] = useState<TableData<Profile>>({
+    data: [],
+    total: 0,
+    page: 1,
+    pageSize: 10,
+    hasMore: false
+  });
+  const [filters, setFilters] = useState<TableFilters>({
+    search: '',
+    columnFilters: {},
+    sortBy: 'created_at',
+    sortOrder: 'desc'
+  });
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [selectedProfileForBank, setSelectedProfileForBank] = useState<Profile | null>(null);
   const { toast } = useToast();
 
+  const columns: Column<Profile>[] = [
+    {
+      key: 'full_name',
+      label: 'Name',
+      sortable: true,
+      filterable: true,
+      render: (value) => value || 'Unnamed User'
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      sortable: true,
+      filterable: true
+    },
+    {
+      key: 'phone',
+      label: 'Phone',
+      sortable: true,
+      render: (value) => value || 'N/A'
+    },
+    {
+      key: 'role',
+      label: 'Role',
+      sortable: true,
+      filterable: true,
+      render: (value) => {
+        const roleLabels: Record<string, string> = {
+          admin: 'Administrator',
+          employee: 'Employee',
+          accountant: 'Accountant',
+          operation: 'Operations',
+          sales_manager: 'Sales Manager'
+        };
+        return roleLabels[value] || value;
+      }
+    },
+    {
+      key: 'hourly_rate',
+      label: 'Hourly Rate',
+      sortable: true,
+      render: (value) => (
+        <span className="font-medium text-green-600">
+          ${(value || 0).toFixed(2)}/hr
+        </span>
+      )
+    },
+    {
+      key: 'is_active',
+      label: 'Status',
+      sortable: true,
+      filterable: true,
+      render: (value) => (
+        <Badge variant={value ? "default" : "secondary"}>
+          {value ? "Active" : "Inactive"}
+        </Badge>
+      )
+    },
+    {
+      key: 'created_at',
+      label: 'Created',
+      sortable: true,
+      render: (value) => new Date(value).toLocaleDateString()
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (_, profile) => (
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => handleEdit(profile)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setSelectedProfileForBank(profile)}>
+            <CreditCard className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(profile.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )
+    }
+  ];
+
   useEffect(() => {
     fetchProfiles();
-  }, []);
-
-  useEffect(() => {
-    const filtered = profiles.filter(profile => 
-      profile.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      profile.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      profile.role?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredProfiles(filtered);
-  }, [profiles, searchTerm]);
+  }, [filters, tableData.page, tableData.pageSize]);
 
   const fetchProfiles = async () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' });
+
+      // Apply search filter
+      if (filters.search) {
+        query = query.or(`full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,role.ilike.%${filters.search}%`);
+      }
+
+      // Apply sorting
+      if (filters.sortBy) {
+        query = query.order(filters.sortBy, { ascending: filters.sortOrder === 'asc' });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+
+      // Apply pagination
+      const from = (tableData.page - 1) * tableData.pageSize;
+      const to = from + tableData.pageSize - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
+
       setProfiles(data || []);
+      setTableData(prev => ({
+        ...prev,
+        data: data || [],
+        total: count || 0,
+        hasMore: (count || 0) > (tableData.page * tableData.pageSize)
+      }));
     } catch (error) {
       console.error('Error fetching profiles:', error);
       toast({
@@ -55,6 +166,25 @@ export const ProfileManagement = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFiltersChange = (newFilters: TableFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+    setTableData(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handlePageChange = (page: number) => {
+    setTableData(prev => ({ ...prev, page }));
+  };
+
+  const handlePageSizeChange = (pageSize: number) => {
+    setTableData(prev => ({ ...prev, pageSize, page: 1 }));
+  };
+
+  const handleExport = async (options: ExportOptions) => {
+    // Implementation for export functionality
+    console.log('Export options:', options);
+    toast({ title: "Export", description: `Exporting as ${options.format}...` });
   };
 
   const handleEdit = (profile: Profile) => {
@@ -97,7 +227,6 @@ export const ProfileManagement = () => {
         if (error) throw error;
         toast({ title: "Success", description: "Profile updated successfully" });
       }
-      // Note: Profile creation is handled in ProfileForm component
       
       setIsFormOpen(false);
       setEditingProfile(null);
@@ -113,10 +242,6 @@ export const ProfileManagement = () => {
       setFormLoading(false);
     }
   };
-
-  if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading profiles...</div>;
-  }
 
   return (
     <div className="space-y-6">
@@ -136,32 +261,18 @@ export const ProfileManagement = () => {
 
       <ProfileStats profiles={profiles} />
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>All Profiles ({filteredProfiles.length})</CardTitle>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search profiles..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64"
-                />
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ProfileTable 
-            profiles={filteredProfiles} 
-            onEdit={handleEdit} 
-            onDelete={handleDelete}
-            onManageBank={(profile) => setSelectedProfileForBank(profile)}
-          />
-        </CardContent>
-      </Card>
+      <DataTable
+        columns={columns}
+        data={tableData}
+        loading={loading}
+        onFiltersChange={handleFiltersChange}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onExport={handleExport}
+        enableExport={true}
+        enableColumnToggle={true}
+        className="w-full"
+      />
 
       <ProfileForm
         isOpen={isFormOpen}
