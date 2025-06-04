@@ -7,15 +7,28 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Edit, Trash2, FolderOpen } from "lucide-react";
+import { Plus, Edit, Trash2, FolderOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Project, Client } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
+import { DataTable } from "./common/DataTable/DataTable";
+import { Column, TableData, TableFilters, ExportOptions } from "./common/DataTable/types";
 
 export const ProjectManagement = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [tableData, setTableData] = useState<TableData<Project>>({
+    data: [],
+    total: 0,
+    page: 1,
+    pageSize: 10,
+    hasMore: false
+  });
+  const [filters, setFilters] = useState<TableFilters>({
+    search: '',
+    columnFilters: {},
+    sortBy: 'created_at',
+    sortOrder: 'desc'
+  });
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -31,14 +44,89 @@ export const ProjectManagement = () => {
     budget: 0
   });
 
+  const columns: Column<Project>[] = [
+    {
+      key: 'name',
+      label: 'Project Name',
+      sortable: true,
+      filterable: true,
+      render: (value) => <span className="font-medium text-gray-900">{value}</span>
+    },
+    {
+      key: 'clients',
+      label: 'Client',
+      sortable: true,
+      filterable: true,
+      render: (_, project) => project.clients?.company || 'N/A'
+    },
+    {
+      key: 'description',
+      label: 'Description',
+      render: (value) => value ? (
+        <span className="text-sm text-gray-600 truncate max-w-xs block">
+          {value.length > 50 ? `${value.substring(0, 50)}...` : value}
+        </span>
+      ) : '-'
+    },
+    {
+      key: 'start_date',
+      label: 'Start Date',
+      sortable: true,
+      render: (value) => new Date(value).toLocaleDateString()
+    },
+    {
+      key: 'budget',
+      label: 'Budget',
+      sortable: true,
+      render: (value) => (
+        <span className="font-medium text-green-600">
+          ${value.toLocaleString()}
+        </span>
+      )
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortable: true,
+      filterable: true,
+      render: (value) => {
+        const variants = {
+          active: "default",
+          completed: "secondary",
+          "on-hold": "destructive"
+        } as const;
+        return (
+          <Badge variant={variants[value as keyof typeof variants] || "secondary"}>
+            {value}
+          </Badge>
+        );
+      }
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (_, project) => (
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => handleEdit(project)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(project.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )
+    }
+  ];
+
   useEffect(() => {
     fetchProjects();
     fetchClients();
-  }, []);
+  }, [filters, tableData.page, tableData.pageSize]);
 
   const fetchProjects = async () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('projects')
         .select(`
           *,
@@ -47,12 +135,35 @@ export const ProjectManagement = () => {
             name,
             company
           )
-        `)
-        .order('created_at', { ascending: false });
+        `, { count: 'exact' });
+
+      // Apply search filter
+      if (filters.search) {
+        query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+      }
+
+      // Apply sorting
+      if (filters.sortBy) {
+        query = query.order(filters.sortBy, { ascending: filters.sortOrder === 'asc' });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+
+      // Apply pagination
+      const from = (tableData.page - 1) * tableData.pageSize;
+      const to = from + tableData.pageSize - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
-      // Type cast the data to ensure proper typing
-      setProjects((data || []) as Project[]);
+
+      setTableData(prev => ({
+        ...prev,
+        data: data || [],
+        total: count || 0,
+        hasMore: (count || 0) > (tableData.page * tableData.pageSize)
+      }));
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast({
@@ -74,11 +185,28 @@ export const ProjectManagement = () => {
         .order('company');
 
       if (error) throw error;
-      // Type cast the data to ensure proper typing
       setClients((data || []) as Client[]);
     } catch (error) {
       console.error('Error fetching clients:', error);
     }
+  };
+
+  const handleFiltersChange = (newFilters: TableFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+    setTableData(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handlePageChange = (page: number) => {
+    setTableData(prev => ({ ...prev, page }));
+  };
+
+  const handlePageSizeChange = (pageSize: number) => {
+    setTableData(prev => ({ ...prev, pageSize, page: 1 }));
+  };
+
+  const handleExport = async (options: ExportOptions) => {
+    console.log('Export options:', options);
+    toast({ title: "Export", description: `Exporting as ${options.format}...` });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,28 +288,13 @@ export const ProjectManagement = () => {
     }
   };
 
-  const filteredProjects = projects.filter(project =>
-    project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    project.clients?.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "default";
-      case "completed":
-        return "secondary";
-      case "on-hold":
-        return "destructive";
-      default:
-        return "secondary";
-    }
+  // Calculate stats from current data
+  const stats = {
+    total: tableData.total,
+    active: tableData.data.filter(p => p.status === "active").length,
+    completed: tableData.data.filter(p => p.status === "completed").length,
+    totalBudget: tableData.data.reduce((sum, p) => sum + p.budget, 0)
   };
-
-  if (loading && projects.length === 0) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
-  }
 
   return (
     <div className="space-y-6">
@@ -295,7 +408,7 @@ export const ProjectManagement = () => {
             <FolderOpen className="h-5 w-5 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{projects.length}</div>
+            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
           </CardContent>
         </Card>
 
@@ -305,9 +418,7 @@ export const ProjectManagement = () => {
             <FolderOpen className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">
-              {projects.filter(p => p.status === "active").length}
-            </div>
+            <div className="text-2xl font-bold text-gray-900">{stats.active}</div>
           </CardContent>
         </Card>
 
@@ -317,9 +428,7 @@ export const ProjectManagement = () => {
             <FolderOpen className="h-5 w-5 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">
-              {projects.filter(p => p.status === "completed").length}
-            </div>
+            <div className="text-2xl font-bold text-gray-900">{stats.completed}</div>
           </CardContent>
         </Card>
 
@@ -330,71 +439,24 @@ export const ProjectManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">
-              ${projects.reduce((sum, p) => sum + p.budget, 0).toLocaleString()}
+              ${stats.totalBudget.toLocaleString()}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Projects</CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search projects..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Project Name</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Client</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Description</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Start Date</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Budget</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProjects.map((project) => (
-                  <tr key={project.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium text-gray-900">{project.name}</td>
-                    <td className="py-3 px-4 text-gray-600">{project.clients?.company}</td>
-                    <td className="py-3 px-4 text-gray-600">{project.description || '-'}</td>
-                    <td className="py-3 px-4 text-gray-600">{project.start_date}</td>
-                    <td className="py-3 px-4 text-gray-600">${project.budget.toLocaleString()}</td>
-                    <td className="py-3 px-4">
-                      <Badge variant={getStatusColor(project.status)}>
-                        {project.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(project)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(project.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      <DataTable
+        columns={columns}
+        data={tableData}
+        loading={loading}
+        onFiltersChange={handleFiltersChange}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onExport={handleExport}
+        enableExport={true}
+        enableColumnToggle={true}
+        className="w-full"
+      />
     </div>
   );
 };
