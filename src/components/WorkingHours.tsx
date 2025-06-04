@@ -199,9 +199,10 @@ export const WorkingHoursComponent = () => {
           projects!working_hours_project_id_fkey (id, name)
         `, { count: 'exact' });
 
-      // Apply search filter
-      if (filters.search) {
-        query = query.or(`profiles.full_name.ilike.%${filters.search}%,projects.name.ilike.%${filters.search}%`);
+      // Apply search filter with proper syntax
+      if (filters.search && filters.search.trim()) {
+        const searchTerm = filters.search.trim();
+        query = query.or(`profiles.full_name.ilike.%${searchTerm}%,projects.name.ilike.%${searchTerm}%,clients.company.ilike.%${searchTerm}%`);
       }
 
       // Apply sorting
@@ -211,10 +212,24 @@ export const WorkingHoursComponent = () => {
         query = query.order('created_at', { ascending: false });
       }
 
-      // Apply pagination
+      // Apply pagination - ensure we don't go beyond available data
       const from = (tableData.page - 1) * tableData.pageSize;
       const to = from + tableData.pageSize - 1;
-      query = query.range(from, to);
+      
+      // Only apply range if we have data
+      const countQuery = await supabase
+        .from('working_hours')
+        .select('*', { count: 'exact', head: true });
+      
+      const totalCount = countQuery.count || 0;
+      
+      if (from < totalCount) {
+        query = query.range(from, to);
+      } else if (totalCount > 0) {
+        // Reset to first page if we're beyond available data
+        setTableData(prev => ({ ...prev, page: 1 }));
+        return;
+      }
 
       const { data, error, count } = await query;
 
@@ -311,7 +326,10 @@ export const WorkingHoursComponent = () => {
 
   const handleFiltersChange = useCallback((newFilters: TableFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
-    setTableData(prev => ({ ...prev, page: 1 }));
+    // Reset to page 1 only when search changes, not when sorting
+    if (newFilters.search !== undefined) {
+      setTableData(prev => ({ ...prev, page: 1 }));
+    }
   }, []);
 
   const handlePageChange = useCallback((page: number) => {

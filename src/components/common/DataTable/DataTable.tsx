@@ -37,6 +37,10 @@ export function DataTable<T extends Record<string, any>>({
     });
   };
 
+  const handleSearch = (searchValue: string) => {
+    onFiltersChange({ search: searchValue });
+  };
+
   const visibleColumns = useMemo(() => 
     columns.filter(col => col.key !== 'actions'),
     [columns]
@@ -55,7 +59,7 @@ export function DataTable<T extends Record<string, any>>({
           <div className="flex items-center gap-4 flex-1">
             <TableSearch
               value=""
-              onChange={(value) => onFiltersChange({ search: value })}
+              onChange={handleSearch}
               placeholder="Search all columns..."
             />
           </div>

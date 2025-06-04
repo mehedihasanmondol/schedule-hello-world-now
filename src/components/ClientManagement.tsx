@@ -107,9 +107,10 @@ export const ClientManagement = () => {
         .from('clients')
         .select('*', { count: 'exact' });
 
-      // Apply search filter
-      if (filters.search) {
-        query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,company.ilike.%${filters.search}%`);
+      // Apply search filter with proper syntax
+      if (filters.search && filters.search.trim()) {
+        const searchTerm = filters.search.trim();
+        query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%`);
       }
 
       // Apply sorting
@@ -119,10 +120,24 @@ export const ClientManagement = () => {
         query = query.order('created_at', { ascending: false });
       }
 
-      // Apply pagination
+      // Apply pagination - ensure we don't go beyond available data
       const from = (tableData.page - 1) * tableData.pageSize;
       const to = from + tableData.pageSize - 1;
-      query = query.range(from, to);
+      
+      // Check total count first
+      const countQuery = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true });
+      
+      const totalCount = countQuery.count || 0;
+      
+      if (from < totalCount) {
+        query = query.range(from, to);
+      } else if (totalCount > 0) {
+        // Reset to first page if we're beyond available data
+        setTableData(prev => ({ ...prev, page: 1 }));
+        return;
+      }
 
       const { data, error, count } = await query;
 
@@ -181,7 +196,10 @@ export const ClientManagement = () => {
 
   const handleFiltersChange = useCallback((newFilters: TableFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
-    setTableData(prev => ({ ...prev, page: 1 }));
+    // Reset to page 1 only when search changes, not when sorting
+    if (newFilters.search !== undefined) {
+      setTableData(prev => ({ ...prev, page: 1 }));
+    }
   }, []);
 
   const handlePageChange = useCallback((page: number) => {
