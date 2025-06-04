@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Payroll } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { PayrollDetailsDialog } from "./PayrollDetailsDialog";
-import { FileText, Download, Print } from "lucide-react";
+import { FileText, Download, Printer } from "lucide-react";
 
 interface PayrollWithProfile extends Omit<Payroll, 'profiles'> {
   profiles: {
@@ -132,7 +131,7 @@ export const SalarySheetManager = ({ payrolls, profiles, onRefresh }: SalaryShee
                   Download
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handlePrint(payroll)}>
-                  <Print className="h-4 w-4 mr-2" />
+                  <Printer className="h-4 w-4 mr-2" />
                   Print
                 </Button>
               </div>

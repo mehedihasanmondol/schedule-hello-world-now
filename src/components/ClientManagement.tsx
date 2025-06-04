@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -100,12 +100,7 @@ export const ClientManagement = () => {
     }
   ];
 
-  useEffect(() => {
-    fetchClients();
-    fetchProjectCounts();
-  }, [filters, tableData.page, tableData.pageSize]);
-
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     setLoading(true);
     try {
       let query = supabase
@@ -156,9 +151,9 @@ export const ClientManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters.search, filters.sortBy, filters.sortOrder, tableData.page, tableData.pageSize, projectCounts, toast]);
 
-  const fetchProjectCounts = async () => {
+  const fetchProjectCounts = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('projects')
@@ -174,25 +169,33 @@ export const ClientManagement = () => {
     } catch (error) {
       console.error('Error fetching project counts:', error);
     }
-  };
+  }, []);
 
-  const handleFiltersChange = (newFilters: TableFilters) => {
+  useEffect(() => {
+    fetchProjectCounts();
+  }, [fetchProjectCounts]);
+
+  useEffect(() => {
+    fetchClients();
+  }, [fetchClients]);
+
+  const handleFiltersChange = useCallback((newFilters: TableFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
     setTableData(prev => ({ ...prev, page: 1 }));
-  };
+  }, []);
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     setTableData(prev => ({ ...prev, page }));
-  };
+  }, []);
 
-  const handlePageSizeChange = (pageSize: number) => {
+  const handlePageSizeChange = useCallback((pageSize: number) => {
     setTableData(prev => ({ ...prev, pageSize, page: 1 }));
-  };
+  }, []);
 
-  const handleExport = async (options: ExportOptions) => {
+  const handleExport = useCallback(async (options: ExportOptions) => {
     console.log('Export options:', options);
     toast({ title: "Export", description: `Exporting as ${options.format}...` });
-  };
+  }, [toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

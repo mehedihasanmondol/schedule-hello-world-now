@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -187,23 +187,7 @@ export const WorkingHoursComponent = () => {
     }
   ];
 
-  useEffect(() => {
-    fetchWorkingHours();
-    fetchProfiles();
-    fetchClients();
-    fetchProjects();
-  }, [filters, tableData.page, tableData.pageSize]);
-
-  useEffect(() => {
-    if (isDialogOpen && !editingWorkingHour) {
-      setFormData(prev => ({
-        ...prev,
-        date: new Date().toISOString().split('T')[0]
-      }));
-    }
-  }, [isDialogOpen, editingWorkingHour]);
-
-  const fetchWorkingHours = async () => {
+  const fetchWorkingHours = useCallback(async () => {
     setLoading(true);
     try {
       let query = supabase
@@ -259,9 +243,9 @@ export const WorkingHoursComponent = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters.search, filters.sortBy, filters.sortOrder, tableData.page, tableData.pageSize, toast]);
 
-  const fetchProfiles = async () => {
+  const fetchProfiles = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -274,9 +258,9 @@ export const WorkingHoursComponent = () => {
     } catch (error) {
       console.error('Error fetching profiles:', error);
     }
-  };
+  }, []);
 
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('clients')
@@ -289,9 +273,9 @@ export const WorkingHoursComponent = () => {
     } catch (error) {
       console.error('Error fetching clients:', error);
     }
-  };
+  }, []);
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('projects')
@@ -304,25 +288,44 @@ export const WorkingHoursComponent = () => {
     } catch (error) {
       console.error('Error fetching projects:', error);
     }
-  };
+  }, []);
 
-  const handleFiltersChange = (newFilters: TableFilters) => {
+  useEffect(() => {
+    fetchProfiles();
+    fetchClients();
+    fetchProjects();
+  }, [fetchProfiles, fetchClients, fetchProjects]);
+
+  useEffect(() => {
+    fetchWorkingHours();
+  }, [fetchWorkingHours]);
+
+  useEffect(() => {
+    if (isDialogOpen && !editingWorkingHour) {
+      setFormData(prev => ({
+        ...prev,
+        date: new Date().toISOString().split('T')[0]
+      }));
+    }
+  }, [isDialogOpen, editingWorkingHour]);
+
+  const handleFiltersChange = useCallback((newFilters: TableFilters) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
     setTableData(prev => ({ ...prev, page: 1 }));
-  };
+  }, []);
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     setTableData(prev => ({ ...prev, page }));
-  };
+  }, []);
 
-  const handlePageSizeChange = (pageSize: number) => {
+  const handlePageSizeChange = useCallback((pageSize: number) => {
     setTableData(prev => ({ ...prev, pageSize, page: 1 }));
-  };
+  }, []);
 
-  const handleExport = async (options: ExportOptions) => {
+  const handleExport = useCallback(async (options: ExportOptions) => {
     console.log('Export options:', options);
     toast({ title: "Export", description: `Exporting as ${options.format}...` });
-  };
+  }, [toast]);
 
   const calculateTotalHours = (startTime: string, endTime: string) => {
     if (!startTime || !endTime) return 0;
