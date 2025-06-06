@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,10 +27,9 @@ export const Dashboard = () => {
 
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState('current_week');
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
-  const [useCustomRange, setUseCustomRange] = useState(false);
+  const [dateShortcut, setDateShortcut] = useState('current-week');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [chartData, setChartData] = useState<any[]>([]);
   const [projectData, setProjectData] = useState<any[]>([]);
   const [hoursData, setHoursData] = useState<any[]>([]);
@@ -40,90 +38,114 @@ export const Dashboard = () => {
   const [clientData, setClientData] = useState<any[]>([]);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
 
+  // Set default dates to current week
   useEffect(() => {
-    fetchDashboardData();
-  }, [dateRange, customStartDate, customEndDate, useCustomRange]);
+    const today = new Date();
+    const currentDay = today.getDay();
+    const mondayDate = new Date(today);
+    mondayDate.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
+    
+    const sundayDate = new Date(mondayDate);
+    sundayDate.setDate(mondayDate.getDate() + 6);
+    
+    setStartDate(mondayDate.toISOString().split('T')[0]);
+    setEndDate(sundayDate.toISOString().split('T')[0]);
+  }, []);
 
-  const getDateRange = () => {
-    if (useCustomRange && customStartDate && customEndDate) {
-      return {
-        startDate: new Date(customStartDate),
-        endDate: new Date(customEndDate)
-      };
-    }
-
-    const now = new Date();
-    let startDate: Date;
-    let endDate: Date = new Date();
-
-    switch (dateRange) {
-      case 'today':
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-        break;
-      case 'current_week':
-        startDate = new Date(now.setDate(now.getDate() - now.getDay()));
-        endDate = new Date(now.setDate(now.getDate() - now.getDay() + 6));
-        break;
-      case 'last_week':
-        const lastWeekStart = new Date(now.setDate(now.getDate() - now.getDay() - 7));
-        const lastWeekEnd = new Date(now.setDate(now.getDate() - now.getDay() - 1));
-        startDate = lastWeekStart;
-        endDate = lastWeekEnd;
-        break;
-      case 'current_month':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        break;
-      case 'last_month':
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        break;
-      // Month-specific options
-      case 'january':
-        startDate = new Date(now.getFullYear(), 0, 1);
-        endDate = new Date(now.getFullYear(), 1, 0);
-        break;
-      case 'february':
-        startDate = new Date(now.getFullYear(), 1, 1);
-        endDate = new Date(now.getFullYear(), 2, 0);
-        break;
-      case 'march':
-        startDate = new Date(now.getFullYear(), 2, 1);
-        endDate = new Date(now.getFullYear(), 3, 0);
-        break;
-      case 'april':
-        startDate = new Date(now.getFullYear(), 3, 1);
-        endDate = new Date(now.getFullYear(), 4, 0);
-        break;
-      case 'may':
-        startDate = new Date(now.getFullYear(), 4, 1);
-        endDate = new Date(now.getFullYear(), 5, 0);
-        break;
-      case 'june':
-        startDate = new Date(now.getFullYear(), 5, 1);
-        endDate = new Date(now.getFullYear(), 6, 0);
-        break;
-      default:
-        startDate = new Date(now.setDate(now.getDate() - now.getDay()));
-        endDate = new Date(now.setDate(now.getDate() - now.getDay() + 6));
-    }
-
-    return { startDate, endDate };
-  };
-
-  const handleCustomDateRange = () => {
-    if (customStartDate && customEndDate) {
-      setUseCustomRange(true);
+  useEffect(() => {
+    if (startDate && endDate) {
       fetchDashboardData();
     }
+  }, [startDate, endDate]);
+
+  const handleDateShortcut = (shortcut: string) => {
+    setDateShortcut(shortcut);
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    
+    let start: Date, end: Date;
+    
+    switch (shortcut) {
+      case "last-week":
+        const lastWeekStart = new Date(today);
+        lastWeekStart.setDate(today.getDate() - today.getDay() - 6);
+        const lastWeekEnd = new Date(lastWeekStart);
+        lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+        start = lastWeekStart;
+        end = lastWeekEnd;
+        break;
+        
+      case "current-week":
+        const currentDay = today.getDay();
+        const mondayDate = new Date(today);
+        mondayDate.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
+        const sundayDate = new Date(mondayDate);
+        sundayDate.setDate(mondayDate.getDate() + 6);
+        start = mondayDate;
+        end = sundayDate;
+        break;
+        
+      case "last-month":
+        start = new Date(currentYear, currentMonth - 1, 1);
+        end = new Date(currentYear, currentMonth, 0);
+        break;
+        
+      case "this-year":
+        start = new Date(currentYear, 0, 1);
+        end = new Date(currentYear, 11, 31);
+        break;
+        
+      default:
+        // Handle month shortcuts (january, february, etc.)
+        const monthNames = [
+          "january", "february", "march", "april", "may", "june",
+          "july", "august", "september", "october", "november", "december"
+        ];
+        const monthIndex = monthNames.indexOf(shortcut.toLowerCase());
+        if (monthIndex !== -1) {
+          start = new Date(currentYear, monthIndex, 1);
+          end = new Date(currentYear, monthIndex + 1, 0);
+        } else {
+          return;
+        }
+    }
+    
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
+  };
+
+  const generateShortcutOptions = () => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    
+    const options = [
+      { value: "last-week", label: "Last Week" },
+      { value: "current-week", label: "Current Week" },
+      { value: "last-month", label: "Last Month" },
+    ];
+    
+    // Add months from current month down to January
+    for (let i = currentMonth; i >= 0; i--) {
+      options.push({
+        value: monthNames[i].toLowerCase(),
+        label: monthNames[i]
+      });
+    }
+    
+    options.push({ value: "this-year", label: "This Year" });
+    
+    return options;
   };
 
   const fetchDashboardData = async () => {
     try {
-      const { startDate, endDate } = getDateRange();
-      const startDateStr = startDate.toISOString().split('T')[0];
-      const endDateStr = endDate.toISOString().split('T')[0];
+      const startDateStr = startDate;
+      const endDateStr = endDate;
 
       // Fetch comprehensive data for complete app summary
       const [
@@ -163,7 +185,7 @@ export const Dashboard = () => {
         
         // Notifications
         supabase.from('notifications').select('id, is_read, priority, created_at')
-          .gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
+          .gte('created_at', new Date(startDate).toISOString()).lte('created_at', new Date(endDate).toISOString()),
         
         // Recent activities
         supabase.from('working_hours').select(`
@@ -449,83 +471,46 @@ export const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600">Comprehensive business management overview</p>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600">Comprehensive business management overview</p>
         </div>
         
-        {/* Enhanced Date Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Date Filters
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Quick Date Range */}
-              <div className="space-y-2">
-                <Label>Quick Date Range</Label>
-                <Select value={dateRange} onValueChange={(value) => { setDateRange(value); setUseCustomRange(false); }}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="current_week">Current Week</SelectItem>
-                    <SelectItem value="last_week">Last Week</SelectItem>
-                    <SelectItem value="current_month">Current Month</SelectItem>
-                    <SelectItem value="last_month">Last Month</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Month Selection */}
-              <div className="space-y-2">
-                <Label>Select Month (2024)</Label>
-                <Select value={dateRange} onValueChange={(value) => { setDateRange(value); setUseCustomRange(false); }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Month" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="january">January</SelectItem>
-                    <SelectItem value="february">February</SelectItem>
-                    <SelectItem value="march">March</SelectItem>
-                    <SelectItem value="april">April</SelectItem>
-                    <SelectItem value="may">May</SelectItem>
-                    <SelectItem value="june">June</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Custom Date Range */}
-              <div className="space-y-2">
-                <Label>Custom Date Range</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="date"
-                    value={customStartDate}
-                    onChange={(e) => setCustomStartDate(e.target.value)}
-                    placeholder="Start Date"
-                  />
-                  <Input
-                    type="date"
-                    value={customEndDate}
-                    onChange={(e) => setCustomEndDate(e.target.value)}
-                    placeholder="End Date"
-                  />
-                  <Button onClick={handleCustomDateRange} size="sm">
-                    <CalendarRange className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Date Range Selector */}
+        <div className="flex items-center gap-4">
+          <Select value={dateShortcut} onValueChange={handleDateShortcut}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Date shortcut" />
+            </SelectTrigger>
+            <SelectContent>
+              {generateShortcutOptions().map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-gray-500" />
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-40"
+              placeholder="Start Date"
+            />
+            <span className="text-gray-500">to</span>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-40"
+              placeholder="End Date"
+            />
+          </div>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
