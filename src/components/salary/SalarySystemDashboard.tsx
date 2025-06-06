@@ -2,12 +2,9 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calculator, Users, DollarSign, Calendar, FileText, Filter } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calculator, Users, DollarSign, Calendar, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Payroll, Profile, WorkingHour, BankTransaction, Client, Project } from "@/types/database";
+import { Payroll, Profile, WorkingHour, BankTransaction } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { PayrollGenerationWizard } from "./PayrollGenerationWizard";
 import { SalarySheetManager } from "./SalarySheetManager";
@@ -18,16 +15,7 @@ export const SalarySystemDashboard = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Filter states
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [profileFilter, setProfileFilter] = useState<string>("all");
-  const [clientFilter, setClientFilter] = useState<string>("all");
-  const [projectFilter, setProjectFilter] = useState<string>("all");
-  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -38,7 +26,7 @@ export const SalarySystemDashboard = () => {
     try {
       setLoading(true);
       
-      const [payrollsRes, profilesRes, workingHoursRes, transactionsRes, clientsRes, projectsRes] = await Promise.all([
+      const [payrollsRes, profilesRes, workingHoursRes, transactionsRes] = await Promise.all([
         supabase.from('payroll').select(`
           *,
           profiles!payroll_profile_id_fkey (id, full_name, email, role, hourly_rate, salary),
@@ -58,26 +46,18 @@ export const SalarySystemDashboard = () => {
           *,
           profiles!bank_transactions_profile_id_fkey (id, full_name),
           bank_accounts (id, bank_name, account_number)
-        `).eq('category', 'salary').order('date', { ascending: false }),
-        
-        supabase.from('clients').select('*').eq('status', 'active').order('name'),
-        
-        supabase.from('projects').select('*').eq('status', 'active').order('name')
+        `).eq('category', 'salary').order('date', { ascending: false })
       ]);
 
       if (payrollsRes.error) throw payrollsRes.error;
       if (profilesRes.error) throw profilesRes.error;
       if (workingHoursRes.error) throw workingHoursRes.error;
       if (transactionsRes.error) throw transactionsRes.error;
-      if (clientsRes.error) throw clientsRes.error;
-      if (projectsRes.error) throw projectsRes.error;
 
       setPayrolls(payrollsRes.data as Payroll[]);
       setProfiles(profilesRes.data as Profile[]);
       setWorkingHours(workingHoursRes.data as WorkingHour[]);
       setBankTransactions(transactionsRes.data as BankTransaction[]);
-      setClients(clientsRes.data as Client[]);
-      setProjects(projectsRes.data as Project[]);
     } catch (error: any) {
       console.error('Error fetching salary data:', error);
       toast({
@@ -90,40 +70,10 @@ export const SalarySystemDashboard = () => {
     }
   };
 
-  // Apply filters to payrolls
-  const getFilteredPayrolls = () => {
-    return payrolls.filter(payroll => {
-      if (statusFilter !== "all" && payroll.status !== statusFilter) return false;
-      if (profileFilter !== "all" && payroll.profile_id !== profileFilter) return false;
-      
-      // For client and project filters, we need to check working hours data
-      if (clientFilter !== "all" || projectFilter !== "all") {
-        const relatedWorkingHours = workingHours.filter(wh => 
-          wh.profile_id === payroll.profile_id &&
-          wh.date >= payroll.pay_period_start &&
-          wh.date <= payroll.pay_period_end
-        );
-        
-        if (clientFilter !== "all") {
-          const hasClientMatch = relatedWorkingHours.some(wh => wh.client_id === clientFilter);
-          if (!hasClientMatch) return false;
-        }
-        
-        if (projectFilter !== "all") {
-          const hasProjectMatch = relatedWorkingHours.some(wh => wh.project_id === projectFilter);
-          if (!hasProjectMatch) return false;
-        }
-      }
-      
-      return true;
-    });
-  };
-
-  const filteredPayrolls = getFilteredPayrolls();
-  const totalPayroll = filteredPayrolls.reduce((sum, p) => sum + p.net_pay, 0);
+  const totalPayroll = payrolls.reduce((sum, p) => sum + p.net_pay, 0);
   const totalHours = workingHours.reduce((sum, wh) => sum + wh.total_hours, 0);
   const totalSalaryTransactions = bankTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const pendingPayrolls = filteredPayrolls.filter(p => p.status === 'pending').length;
+  const pendingPayrolls = payrolls.filter(p => p.status === 'pending').length;
 
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading salary system...</div>;
@@ -207,79 +157,11 @@ export const SalarySystemDashboard = () => {
         </TabsList>
 
         <TabsContent value="salary-sheets">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Salary Sheets Management</CardTitle>
-                <div className="flex items-center gap-2">
-                  {/* Status Filter */}
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {/* Profile Filter */}
-                  <Select value={profileFilter} onValueChange={setProfileFilter}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Profile" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Profiles</SelectItem>
-                      {profiles.map((profile) => (
-                        <SelectItem key={profile.id} value={profile.id}>
-                          {profile.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {/* Client Filter */}
-                  <Select value={clientFilter} onValueChange={setClientFilter}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Client" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Clients</SelectItem>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {/* Project Filter */}
-                  <Select value={projectFilter} onValueChange={setProjectFilter}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Project" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Projects</SelectItem>
-                      {projects.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <SalarySheetManager 
-                payrolls={filteredPayrolls}
-                profiles={profiles}
-                onRefresh={fetchAllData}
-              />
-            </CardContent>
-          </Card>
+          <SalarySheetManager 
+            payrolls={payrolls}
+            profiles={profiles}
+            onRefresh={fetchAllData}
+          />
         </TabsContent>
 
         <TabsContent value="payroll-generation">
