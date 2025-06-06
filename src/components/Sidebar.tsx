@@ -30,7 +30,7 @@ export const Sidebar = ({ activeTab, onTabChange, hasPermission }: SidebarProps)
   const menuItems = [
     { 
       id: "dashboard", 
-      label: "Default Dashboard", 
+      label: "Dashboard", 
       icon: LayoutDashboard,
       permission: "dashboard_view"
     },
