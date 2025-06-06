@@ -2,9 +2,25 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calculator, Users, DollarSign, Calendar, FileText } from "lucide-react";
+import { Calculator, Users, DollarSign, Calendar, FileText, Filter, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { Payroll, Profile, WorkingHour, BankTransaction } from "@/types/database";
+import { Payroll, Profile, WorkingHour, BankTransaction, Client, Project } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { PayrollGenerationWizard } from "./PayrollGenerationWizard";
 import { SalarySheetManager } from "./SalarySheetManager";
@@ -15,7 +31,16 @@ export const SalarySystemDashboard = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProfileId, setSelectedProfileId] = useState<string>("all");
+  const [selectedClientId, setSelectedClientId] = useState<string>("all");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -26,7 +51,7 @@ export const SalarySystemDashboard = () => {
     try {
       setLoading(true);
       
-      const [payrollsRes, profilesRes, workingHoursRes, transactionsRes] = await Promise.all([
+      const [payrollsRes, profilesRes, workingHoursRes, transactionsRes, clientsRes, projectsRes] = await Promise.all([
         supabase.from('payroll').select(`
           *,
           profiles!payroll_profile_id_fkey (id, full_name, email, role, hourly_rate, salary),
@@ -46,18 +71,26 @@ export const SalarySystemDashboard = () => {
           *,
           profiles!bank_transactions_profile_id_fkey (id, full_name),
           bank_accounts (id, bank_name, account_number)
-        `).eq('category', 'salary').order('date', { ascending: false })
+        `).eq('category', 'salary').order('date', { ascending: false }),
+
+        supabase.from('clients').select('*').eq('status', 'active').order('name'),
+        
+        supabase.from('projects').select('*').eq('status', 'active').order('name')
       ]);
 
       if (payrollsRes.error) throw payrollsRes.error;
       if (profilesRes.error) throw profilesRes.error;
       if (workingHoursRes.error) throw workingHoursRes.error;
       if (transactionsRes.error) throw transactionsRes.error;
+      if (clientsRes.error) throw clientsRes.error;
+      if (projectsRes.error) throw projectsRes.error;
 
       setPayrolls(payrollsRes.data as Payroll[]);
       setProfiles(profilesRes.data as Profile[]);
       setWorkingHours(workingHoursRes.data as WorkingHour[]);
       setBankTransactions(transactionsRes.data as BankTransaction[]);
+      setClients(clientsRes.data as Client[]);
+      setProjects(projectsRes.data as Project[]);
     } catch (error: any) {
       console.error('Error fetching salary data:', error);
       toast({
@@ -70,10 +103,40 @@ export const SalarySystemDashboard = () => {
     }
   };
 
-  const totalPayroll = payrolls.reduce((sum, p) => sum + p.net_pay, 0);
-  const totalHours = workingHours.reduce((sum, wh) => sum + wh.total_hours, 0);
-  const totalSalaryTransactions = bankTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const pendingPayrolls = payrolls.filter(p => p.status === 'pending').length;
+  // Filter data based on current filters
+  const filteredPayrolls = payrolls.filter(payroll => {
+    const matchesSearch = payroll.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
+    const matchesProfile = selectedProfileId === "all" || payroll.profile_id === selectedProfileId;
+    return matchesSearch && matchesProfile;
+  });
+
+  const filteredWorkingHours = workingHours.filter(wh => {
+    const matchesSearch = wh.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
+    const matchesProfile = selectedProfileId === "all" || wh.profile_id === selectedProfileId;
+    const matchesClient = selectedClientId === "all" || wh.client_id === selectedClientId;
+    const matchesProject = selectedProjectId === "all" || wh.project_id === selectedProjectId;
+    return matchesSearch && matchesProfile && matchesClient && matchesProject;
+  });
+
+  const filteredBankTransactions = bankTransactions.filter(transaction => {
+    const matchesSearch = transaction.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
+    const matchesProfile = selectedProfileId === "all" || transaction.profile_id === selectedProfileId;
+    return matchesSearch && matchesProfile;
+  });
+
+  const totalPayroll = filteredPayrolls.reduce((sum, p) => sum + p.net_pay, 0);
+  const totalHours = filteredWorkingHours.reduce((sum, wh) => sum + wh.total_hours, 0);
+  const totalSalaryTransactions = filteredBankTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const pendingPayrolls = filteredPayrolls.filter(p => p.status === 'pending').length;
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setSelectedProfileId("all");
+    setSelectedClientId("all");
+    setSelectedProjectId("all");
+  };
+
+  const hasActiveFilters = searchTerm || selectedProfileId !== "all" || selectedClientId !== "all" || selectedProjectId !== "all";
 
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading salary system...</div>;
@@ -88,6 +151,100 @@ export const SalarySystemDashboard = () => {
             <h1 className="text-3xl font-bold text-gray-900">Comprehensive Salary System</h1>
             <p className="text-gray-600">Manage payroll, salary sheets, and reports</p>
           </div>
+        </div>
+
+        {/* Search and Filter Controls */}
+        <div className="flex items-center gap-3">
+          {/* Search Field */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search by name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-64"
+            />
+          </div>
+
+          {/* Filter Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className={hasActiveFilters ? "bg-blue-50 border-blue-200" : ""}>
+                <Filter className={`h-4 w-4 ${hasActiveFilters ? "text-blue-600" : ""}`} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80 bg-white">
+              <DropdownMenuLabel>Filter Options</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              
+              <div className="p-4 space-y-4">
+                {/* Profile Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Profile</label>
+                  <Select value={selectedProfileId} onValueChange={setSelectedProfileId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Profiles" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Profiles</SelectItem>
+                      {profiles.map((profile) => (
+                        <SelectItem key={profile.id} value={profile.id}>
+                          {profile.full_name} - {profile.role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Client Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Client</label>
+                  <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Clients" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Clients</SelectItem>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name} - {client.company}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Project Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Project</label>
+                  <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Projects" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Projects</SelectItem>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Clear Filters Button */}
+                {hasActiveFilters && (
+                  <Button 
+                    variant="outline" 
+                    onClick={clearFilters}
+                    className="w-full"
+                  >
+                    Clear All Filters
+                  </Button>
+                )}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -158,7 +315,7 @@ export const SalarySystemDashboard = () => {
 
         <TabsContent value="salary-sheets">
           <SalarySheetManager 
-            payrolls={payrolls}
+            payrolls={filteredPayrolls}
             profiles={profiles}
             onRefresh={fetchAllData}
           />
@@ -167,16 +324,16 @@ export const SalarySystemDashboard = () => {
         <TabsContent value="payroll-generation">
           <PayrollGenerationWizard 
             profiles={profiles}
-            workingHours={workingHours}
+            workingHours={filteredWorkingHours}
             onRefresh={fetchAllData}
           />
         </TabsContent>
 
         <TabsContent value="reports">
           <SalaryReports 
-            payrolls={payrolls}
-            workingHours={workingHours}
-            bankTransactions={bankTransactions}
+            payrolls={filteredPayrolls}
+            workingHours={filteredWorkingHours}
+            bankTransactions={filteredBankTransactions}
             profiles={profiles}
           />
         </TabsContent>
