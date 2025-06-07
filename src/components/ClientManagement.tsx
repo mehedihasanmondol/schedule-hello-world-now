@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,7 +49,6 @@ export const ClientManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      // Type cast the data to ensure proper typing
       setClients((data || []) as Client[]);
     } catch (error) {
       console.error('Error fetching clients:', error);
@@ -292,51 +290,90 @@ export const ClientManagement = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0 sm:p-6">
-          <div className="w-full overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[180px]">Company</TableHead>
-                  <TableHead className="hidden sm:table-cell">Contact</TableHead>
-                  <TableHead className="hidden md:table-cell">Email</TableHead>
-                  <TableHead className="hidden lg:table-cell">Phone</TableHead>
-                  <TableHead className="w-[80px]">Projects</TableHead>
-                  <TableHead className="w-[100px]">Status</TableHead>
-                  <TableHead className="w-[120px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredClients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell className="font-medium">
-                      <div>
-                        <div className="font-medium text-sm">{client.company}</div>
-                        <div className="text-xs text-muted-foreground sm:hidden">{client.name}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm">{client.name}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">{client.email}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm">{client.phone || '-'}</TableCell>
-                    <TableCell className="text-sm">{projectCounts[client.id] || 0}</TableCell>
-                    <TableCell>
-                      <Badge variant={client.status === "active" ? "default" : "secondary"} className="text-xs">
-                        {client.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(client)} className="h-8 w-8 p-0">
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 h-8 w-8 p-0" onClick={() => handleDelete(client.id)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
+          <div className="w-full">
+            {/* Mobile/Tablet Card Layout */}
+            <div className="block lg:hidden space-y-3 p-4">
+              {filteredClients.map((client) => (
+                <div key={client.id} className="bg-white border rounded-lg p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-sm text-gray-900 truncate">
+                        {client.company}
+                      </h3>
+                      <p className="text-xs text-gray-500 truncate">{client.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{client.email}</p>
+                    </div>
+                    <Badge variant={client.status === "active" ? "default" : "secondary"} className="text-xs ml-2">
+                      {client.status}
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-gray-500">Phone:</span>
+                      <p className="font-medium">{client.phone || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Projects:</span>
+                      <p className="font-medium">{projectCounts[client.id] || 0}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 border-t">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(client)} className="flex-1">
+                      <Edit className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(client.id)}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table Layout */}
+            <div className="hidden lg:block overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Company</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead className="w-[80px]">Projects</TableHead>
+                    <TableHead className="w-[100px]">Status</TableHead>
+                    <TableHead className="w-[120px]">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredClients.map((client) => (
+                    <TableRow key={client.id}>
+                      <TableCell className="font-medium">{client.company}</TableCell>
+                      <TableCell className="text-sm">{client.name}</TableCell>
+                      <TableCell className="text-sm">{client.email}</TableCell>
+                      <TableCell className="text-sm">{client.phone || '-'}</TableCell>
+                      <TableCell className="text-sm">{projectCounts[client.id] || 0}</TableCell>
+                      <TableCell>
+                        <Badge variant={client.status === "active" ? "default" : "secondary"} className="text-xs">
+                          {client.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(client)} className="h-8 w-8 p-0">
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 h-8 w-8 p-0" onClick={() => handleDelete(client.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

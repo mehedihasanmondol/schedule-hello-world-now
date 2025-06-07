@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,7 +59,6 @@ export const ProjectManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      // Type cast the data to ensure proper typing
       setProjects((data || []) as Project[]);
     } catch (error) {
       console.error('Error fetching projects:', error);
@@ -83,7 +81,6 @@ export const ProjectManagement = () => {
         .order('company');
 
       if (error) throw error;
-      // Type cast the data to ensure proper typing
       setClients((data || []) as Client[]);
     } catch (error) {
       console.error('Error fetching clients:', error);
@@ -361,57 +358,98 @@ export const ProjectManagement = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0 sm:p-6">
-          <div className="w-full overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[200px]">Project Name</TableHead>
-                  <TableHead className="hidden sm:table-cell">Client</TableHead>
-                  <TableHead className="hidden md:table-cell">Description</TableHead>
-                  <TableHead className="hidden lg:table-cell">Start Date</TableHead>
-                  <TableHead className="w-[100px]">Budget</TableHead>
-                  <TableHead className="w-[100px]">Status</TableHead>
-                  <TableHead className="w-[120px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProjects.map((project) => (
-                  <TableRow key={project.id}>
-                    <TableCell className="font-medium">
-                      <div>
-                        <div className="font-medium text-sm">{project.name}</div>
-                        <div className="text-xs text-muted-foreground sm:hidden">{project.clients?.company}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm">{project.clients?.company}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">
-                      {project.description ? (
-                        <span className="truncate max-w-[200px] block">{project.description}</span>
-                      ) : (
-                        '-'
+          <div className="w-full">
+            {/* Mobile/Tablet Card Layout */}
+            <div className="block lg:hidden space-y-3 p-4">
+              {filteredProjects.map((project) => (
+                <div key={project.id} className="bg-white border rounded-lg p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-sm text-gray-900 truncate">
+                        {project.name}
+                      </h3>
+                      <p className="text-xs text-gray-500 truncate">{project.clients?.company}</p>
+                      {project.description && (
+                        <p className="text-xs text-gray-500 line-clamp-2 mt-1">{project.description}</p>
                       )}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm">{project.start_date}</TableCell>
-                    <TableCell className="text-sm">${project.budget.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(project.status)} className="text-xs">
-                        {project.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(project)} className="h-8 w-8 p-0">
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 h-8 w-8 p-0" onClick={() => handleDelete(project.id)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    </div>
+                    <Badge variant={getStatusColor(project.status)} className="text-xs ml-2">
+                      {project.status}
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-gray-500">Start Date:</span>
+                      <p className="font-medium">{project.start_date}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Budget:</span>
+                      <p className="font-medium">${project.budget.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 border-t">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(project)} className="flex-1">
+                      <Edit className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(project.id)}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table Layout */}
+            <div className="hidden lg:block overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px]">Project Name</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead className="w-[100px]">Budget</TableHead>
+                    <TableHead className="w-[100px]">Status</TableHead>
+                    <TableHead className="w-[120px]">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredProjects.map((project) => (
+                    <TableRow key={project.id}>
+                      <TableCell className="font-medium">{project.name}</TableCell>
+                      <TableCell className="text-sm">{project.clients?.company}</TableCell>
+                      <TableCell className="text-sm">
+                        {project.description ? (
+                          <span className="truncate max-w-[200px] block">{project.description}</span>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm">{project.start_date}</TableCell>
+                      <TableCell className="text-sm">${project.budget.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusColor(project.status)} className="text-xs">
+                          {project.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(project)} className="h-8 w-8 p-0">
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 h-8 w-8 p-0" onClick={() => handleDelete(project.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>
