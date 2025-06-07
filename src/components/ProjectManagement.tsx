@@ -88,9 +88,27 @@ export const ProjectManagement = () => {
     }
   };
 
+  const resetForm = () => {
+    setFormData({ name: "", description: "", client_id: "", status: "active", start_date: "", end_date: "", budget: 0 });
+    setEditingProject(null);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      resetForm();
+    }
+    setIsDialogOpen(open);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    
+    // Don't set loading on the whole component to prevent re-render
+    const submitButton = e.currentTarget.querySelector('button[type="submit"]') as HTMLButtonElement;
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Saving...";
+    }
 
     try {
       const projectData = {
@@ -116,9 +134,8 @@ export const ProjectManagement = () => {
       }
 
       setIsDialogOpen(false);
-      setEditingProject(null);
-      setFormData({ name: "", description: "", client_id: "", status: "active", start_date: "", end_date: "", budget: 0 });
-      fetchProjects();
+      resetForm();
+      await fetchProjects();
     } catch (error) {
       console.error('Error saving project:', error);
       toast({
@@ -127,7 +144,10 @@ export const ProjectManagement = () => {
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = editingProject ? "Update Project" : "Add Project";
+      }
     }
   };
 
@@ -156,7 +176,7 @@ export const ProjectManagement = () => {
 
       if (error) throw error;
       toast({ title: "Success", description: "Project deleted successfully" });
-      fetchProjects();
+      await fetchProjects();
     } catch (error) {
       console.error('Error deleting project:', error);
       toast({
@@ -208,12 +228,9 @@ export const ProjectManagement = () => {
     <div className="space-y-4 md:space-y-6 p-4 md:p-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Project Management</h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => {
-              setEditingProject(null);
-              setFormData({ name: "", description: "", client_id: "", status: "active", start_date: "", end_date: "", budget: 0 });
-            }}>
+            <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={resetForm}>
               <Plus className="h-4 w-4" />
               Add Project
             </Button>
@@ -301,8 +318,8 @@ export const ProjectManagement = () => {
                   </Select>
                 </div>
               </div>
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? "Saving..." : editingProject ? "Update Project" : "Add Project"}
+              <Button type="submit" className="w-full">
+                {editingProject ? "Update Project" : "Add Project"}
               </Button>
             </form>
           </DialogContent>
