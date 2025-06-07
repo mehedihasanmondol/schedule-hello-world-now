@@ -291,17 +291,17 @@ export const PersonalDashboard = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">My Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Dashboard</h1>
           <p className="text-gray-600">Welcome back, {profile?.full_name || 'User'}!</p>
         </div>
         
         {/* Date Range Selector */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:gap-4 md:space-y-0">
           <Select value={dateShortcut} onValueChange={handleDateShortcut}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full md:w-40">
               <SelectValue placeholder="Date shortcut" />
             </SelectTrigger>
             <SelectContent>
@@ -313,28 +313,28 @@ export const PersonalDashboard = () => {
             </SelectContent>
           </Select>
           
-          <div className="flex items-center gap-2">
-            <CalendarRange className="h-4 w-4 text-gray-500" />
+          <div className="flex flex-col space-y-2 md:flex-row md:items-center md:gap-2 md:space-y-0">
+            <CalendarRange className="h-4 w-4 text-gray-500 hidden md:block" />
             <Input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-40"
+              className="w-full md:w-40"
               placeholder="Start Date"
             />
-            <span className="text-gray-500">to</span>
+            <span className="text-gray-500 text-center md:text-left">to</span>
             <Input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-40"
+              className="w-full md:w-40"
               placeholder="End Date"
             />
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {personalDashboardStats.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -346,7 +346,7 @@ export const PersonalDashboard = () => {
                 <Icon className={`h-5 w-5 ${stat.color}`} />
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+                <div className={`text-xl md:text-2xl font-bold ${stat.color}`}>{stat.value}</div>
                 <p className="text-xs text-muted-foreground">{stat.subtitle}</p>
               </CardContent>
             </Card>
@@ -354,21 +354,21 @@ export const PersonalDashboard = () => {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+            <CardTitle className="text-lg md:text-xl">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-center space-x-3">
-                  <div className={`w-2 h-2 ${activity.color} rounded-full`}></div>
-                  <div className="flex-1">
-                    <span className="text-sm">{activity.description}</span>
-                    <div className="flex items-center gap-2">
+                <div key={index} className="flex items-start md:items-center space-x-3">
+                  <div className={`w-2 h-2 ${activity.color} rounded-full mt-2 md:mt-0`}></div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm block">{activity.description}</span>
+                    <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 mt-1">
                       <span className="text-xs text-gray-500">{activity.time}</span>
-                      <span className={`text-xs px-2 py-1 rounded ${
+                      <span className={`text-xs px-2 py-1 rounded w-fit ${
                         activity.status === 'approved' ? 'bg-green-100 text-green-800' :
                         activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-gray-100 text-gray-800'
@@ -388,19 +388,19 @@ export const PersonalDashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Upcoming Schedule</CardTitle>
+            <CardTitle className="text-lg md:text-xl">Upcoming Schedule</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {upcomingSchedule.map((schedule, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">{schedule.projects?.name || 'Unknown Project'}</p>
+                <div key={index} className="flex flex-col md:flex-row md:justify-between md:items-center p-3 bg-blue-50 rounded-lg space-y-2 md:space-y-0">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{schedule.projects?.name || 'Unknown Project'}</p>
                     <p className="text-sm text-gray-600">
                       {new Date(schedule.date).toLocaleDateString()} • {schedule.total_hours}h
                     </p>
                   </div>
-                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded w-fit">
                     {schedule.clients?.company || 'Unknown Client'}
                   </span>
                 </div>

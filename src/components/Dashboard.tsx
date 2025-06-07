@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -470,17 +471,17 @@ export const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6 p-2 md:p-0">
+      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Comprehensive business management overview</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-sm md:text-base text-gray-600">Comprehensive business management overview</p>
         </div>
         
-        {/* Date Range Selector */}
-        <div className="flex items-center gap-4">
+        {/* Mobile-friendly Date Range Selector */}
+        <div className="flex flex-col space-y-3 md:flex-row md:items-center md:gap-4 md:space-y-0">
           <Select value={dateShortcut} onValueChange={handleDateShortcut}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full md:w-40">
               <SelectValue placeholder="Date shortcut" />
             </SelectTrigger>
             <SelectContent>
@@ -492,61 +493,66 @@ export const Dashboard = () => {
             </SelectContent>
           </Select>
           
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-gray-500" />
+          <div className="flex flex-col space-y-2 md:flex-row md:items-center md:gap-2 md:space-y-0">
+            <Calendar className="h-4 w-4 text-gray-500 hidden md:block" />
             <Input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-40"
+              className="w-full md:w-40"
               placeholder="Start Date"
             />
-            <span className="text-gray-500">to</span>
+            <span className="text-gray-500 text-center md:text-left">to</span>
             <Input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-40"
+              className="w-full md:w-40"
               placeholder="End Date"
             />
           </div>
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* Mobile-friendly Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
         {dashboardStats.map((stat) => {
           const Icon = stat.icon;
           return (
             <Card key={stat.title} className="hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
+                <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
                   {stat.title}
                 </CardTitle>
-                <Icon className={`h-5 w-5 ${stat.color}`} />
+                <Icon className={`h-4 w-4 md:h-5 md:w-5 ${stat.color}`} />
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+                <div className={`text-lg md:text-2xl font-bold ${stat.color}`}>{stat.value}</div>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Mobile-friendly Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <TrendingUp className="h-4 w-4 md:h-5 md:w-5" />
               Hours Trend
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <LineChart data={hoursData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
+                <XAxis 
+                  dataKey="date" 
+                  fontSize={12}
+                  tick={{ fontSize: 10 }}
+                />
+                <YAxis fontSize={12} />
                 <Tooltip />
                 <Legend />
                 <Line type="monotone" dataKey="hours" stroke="#8884d8" strokeWidth={2} />
@@ -557,17 +563,21 @@ export const Dashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <DollarSign className="h-4 w-4 md:h-5 md:w-5" />
               Revenue Trend
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
+                <XAxis 
+                  dataKey="date" 
+                  fontSize={12}
+                  tick={{ fontSize: 10 }}
+                />
+                <YAxis fontSize={12} />
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="revenue" fill="#82ca9d" />
@@ -577,16 +587,16 @@ export const Dashboard = () => {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <Briefcase className="h-4 w-4 md:h-5 md:w-5" />
               Project Hours Distribution
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
                   data={projectData}
@@ -610,18 +620,18 @@ export const Dashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+            <CardTitle className="text-base md:text-lg">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4 max-h-64 overflow-y-auto">
               {recentActivities.map((activity, index) => (
-                <div key={index} className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <div className="flex-1">
-                    <span className="text-sm">{activity.description}</span>
-                    <div className="flex items-center gap-2">
+                <div key={index} className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs md:text-sm block">{activity.description}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
                       <span className="text-xs text-gray-500">{activity.time}</span>
-                      <span className={`text-xs px-2 py-1 rounded ${
+                      <span className={`text-xs px-2 py-1 rounded w-fit ${
                         activity.status === 'approved' ? 'bg-green-100 text-green-800' :
                         activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-gray-100 text-gray-800'
@@ -633,7 +643,7 @@ export const Dashboard = () => {
                 </div>
               ))}
               {recentActivities.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-4">No recent activity</p>
+                <p className="text-xs md:text-sm text-gray-500 text-center py-4">No recent activity</p>
               )}
             </div>
           </CardContent>
@@ -641,21 +651,28 @@ export const Dashboard = () => {
       </div>
 
       {/* Additional Comprehensive Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <Users className="h-4 w-4 md:h-5 md:w-5" />
               Employee Performance
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <ComposedChart data={employeeData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
+                <XAxis 
+                  dataKey="name" 
+                  fontSize={10}
+                  tick={{ fontSize: 8 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis yAxisId="left" fontSize={10} />
+                <YAxis yAxisId="right" orientation="right" fontSize={10} />
                 <Tooltip />
                 <Legend />
                 <Bar yAxisId="left" dataKey="hours" fill="#8884d8" name="Hours" />
@@ -667,18 +684,22 @@ export const Dashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <BarChart3 className="h-4 w-4 md:h-5 md:w-5" />
               Monthly Comparison
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <ComposedChart data={monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
+                <XAxis 
+                  dataKey="month" 
+                  fontSize={12}
+                  tick={{ fontSize: 10 }}
+                />
+                <YAxis yAxisId="left" fontSize={10} />
+                <YAxis yAxisId="right" orientation="right" fontSize={10} />
                 <Tooltip />
                 <Legend />
                 <Area yAxisId="left" type="monotone" dataKey="hours" fill="#8884d8" stroke="#8884d8" fillOpacity={0.6} name="Hours" />
@@ -689,16 +710,16 @@ export const Dashboard = () => {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <DollarSign className="h-4 w-4 md:h-5 md:w-5" />
               Revenue by Category
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
                   data={clientData}
@@ -722,20 +743,20 @@ export const Dashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <FileText className="h-4 w-4 md:h-5 md:w-5" />
               Payroll Summary Table
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-auto max-h-[300px]">
+            <div className="overflow-x-auto max-h-[250px]">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Gross Pay</TableHead>
-                    <TableHead>Net Pay</TableHead>
-                    <TableHead>Period</TableHead>
+                    <TableHead className="text-xs md:text-sm">Status</TableHead>
+                    <TableHead className="text-xs md:text-sm">Gross Pay</TableHead>
+                    <TableHead className="text-xs md:text-sm">Net Pay</TableHead>
+                    <TableHead className="text-xs md:text-sm">Period</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -750,15 +771,15 @@ export const Dashboard = () => {
                           {payroll.status}
                         </span>
                       </TableCell>
-                      <TableCell>${payroll.gross_pay?.toLocaleString()}</TableCell>
-                      <TableCell>${payroll.net_pay?.toLocaleString()}</TableCell>
-                      <TableCell>{payroll.pay_period_start} to {payroll.pay_period_end}</TableCell>
+                      <TableCell className="text-xs md:text-sm">${payroll.gross_pay?.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs md:text-sm">${payroll.net_pay?.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs md:text-sm">{payroll.pay_period_start} to {payroll.pay_period_end}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
               {payrollData.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-4">No payroll data available</p>
+                <p className="text-xs md:text-sm text-gray-500 text-center py-4">No payroll data available</p>
               )}
             </div>
           </CardContent>
@@ -768,35 +789,35 @@ export const Dashboard = () => {
       {/* Employee Performance Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+            <Users className="h-4 w-4 md:h-5 md:w-5" />
             Detailed Employee Performance
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-auto">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Total Hours</TableHead>
-                  <TableHead>Total Amount</TableHead>
-                  <TableHead>Average Hourly Rate</TableHead>
+                  <TableHead className="text-xs md:text-sm">Employee</TableHead>
+                  <TableHead className="text-xs md:text-sm">Total Hours</TableHead>
+                  <TableHead className="text-xs md:text-sm">Total Amount</TableHead>
+                  <TableHead className="text-xs md:text-sm">Average Hourly Rate</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {employeeData.map((employee: any, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-medium">{employee.name}</TableCell>
-                    <TableCell>{employee.hours.toFixed(1)}h</TableCell>
-                    <TableCell>${employee.amount.toLocaleString()}</TableCell>
-                    <TableCell>${employee.hours > 0 ? (employee.amount / employee.hours).toFixed(2) : '0.00'}/hr</TableCell>
+                    <TableCell className="font-medium text-xs md:text-sm">{employee.name}</TableCell>
+                    <TableCell className="text-xs md:text-sm">{employee.hours.toFixed(1)}h</TableCell>
+                    <TableCell className="text-xs md:text-sm">${employee.amount.toLocaleString()}</TableCell>
+                    <TableCell className="text-xs md:text-sm">${employee.hours > 0 ? (employee.amount / employee.hours).toFixed(2) : '0.00'}/hr</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
             {employeeData.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-4">No employee data available for selected period</p>
+              <p className="text-xs md:text-sm text-gray-500 text-center py-4">No employee data available for selected period</p>
             )}
           </div>
         </CardContent>
