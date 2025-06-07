@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,14 @@ import { Plus, Search, Edit, Trash2, FolderOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Project, Client } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const ProjectManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -352,42 +361,44 @@ export const ProjectManagement = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0 sm:p-6">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Project Name</th>
-                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm hidden sm:table-cell">Client</th>
-                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm hidden md:table-cell">Description</th>
-                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm hidden lg:table-cell">Start Date</th>
-                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Budget</th>
-                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Status</th>
-                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="w-full overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Project Name</TableHead>
+                  <TableHead className="hidden sm:table-cell">Client</TableHead>
+                  <TableHead className="hidden md:table-cell">Description</TableHead>
+                  <TableHead className="hidden lg:table-cell">Start Date</TableHead>
+                  <TableHead className="w-[100px]">Budget</TableHead>
+                  <TableHead className="w-[100px]">Status</TableHead>
+                  <TableHead className="w-[120px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredProjects.map((project) => (
-                  <tr key={project.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-2 md:px-4">
-                      <div className="font-medium text-gray-900 text-sm">{project.name}</div>
-                      <div className="text-xs text-gray-600 sm:hidden">{project.clients?.company}</div>
-                    </td>
-                    <td className="py-3 px-2 md:px-4 text-gray-600 text-sm hidden sm:table-cell">{project.clients?.company}</td>
-                    <td className="py-3 px-2 md:px-4 text-gray-600 text-sm hidden md:table-cell">
+                  <TableRow key={project.id}>
+                    <TableCell className="font-medium">
+                      <div>
+                        <div className="font-medium text-sm">{project.name}</div>
+                        <div className="text-xs text-muted-foreground sm:hidden">{project.clients?.company}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm">{project.clients?.company}</TableCell>
+                    <TableCell className="hidden md:table-cell text-sm">
                       {project.description ? (
                         <span className="truncate max-w-[200px] block">{project.description}</span>
                       ) : (
                         '-'
                       )}
-                    </td>
-                    <td className="py-3 px-2 md:px-4 text-gray-600 text-sm hidden lg:table-cell">{project.start_date}</td>
-                    <td className="py-3 px-2 md:px-4 text-gray-600 text-sm">${project.budget.toLocaleString()}</td>
-                    <td className="py-3 px-2 md:px-4">
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm">{project.start_date}</TableCell>
+                    <TableCell className="text-sm">${project.budget.toLocaleString()}</TableCell>
+                    <TableCell>
                       <Badge variant={getStatusColor(project.status)} className="text-xs">
                         {project.status}
                       </Badge>
-                    </td>
-                    <td className="py-3 px-2 md:px-4">
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(project)} className="h-8 w-8 p-0">
                           <Edit className="h-3 w-3" />
@@ -396,11 +407,11 @@ export const ProjectManagement = () => {
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>

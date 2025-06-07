@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,14 @@ import { Plus, Search, Edit, Trash2, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Client } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const ClientManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -283,36 +292,38 @@ export const ClientManagement = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0 sm:p-6">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px]">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Company</th>
-                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm hidden sm:table-cell">Contact</th>
-                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm hidden md:table-cell">Email</th>
-                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm hidden lg:table-cell">Phone</th>
-                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Projects</th>
-                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Status</th>
-                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="w-full overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[180px]">Company</TableHead>
+                  <TableHead className="hidden sm:table-cell">Contact</TableHead>
+                  <TableHead className="hidden md:table-cell">Email</TableHead>
+                  <TableHead className="hidden lg:table-cell">Phone</TableHead>
+                  <TableHead className="w-[80px]">Projects</TableHead>
+                  <TableHead className="w-[100px]">Status</TableHead>
+                  <TableHead className="w-[120px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredClients.map((client) => (
-                  <tr key={client.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-2 md:px-4">
-                      <div className="font-medium text-gray-900 text-sm">{client.company}</div>
-                      <div className="text-xs text-gray-600 sm:hidden">{client.name}</div>
-                    </td>
-                    <td className="py-3 px-2 md:px-4 text-gray-600 text-sm hidden sm:table-cell">{client.name}</td>
-                    <td className="py-3 px-2 md:px-4 text-gray-600 text-sm hidden md:table-cell">{client.email}</td>
-                    <td className="py-3 px-2 md:px-4 text-gray-600 text-sm hidden lg:table-cell">{client.phone || '-'}</td>
-                    <td className="py-3 px-2 md:px-4 text-gray-600 text-sm">{projectCounts[client.id] || 0}</td>
-                    <td className="py-3 px-2 md:px-4">
+                  <TableRow key={client.id}>
+                    <TableCell className="font-medium">
+                      <div>
+                        <div className="font-medium text-sm">{client.company}</div>
+                        <div className="text-xs text-muted-foreground sm:hidden">{client.name}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm">{client.name}</TableCell>
+                    <TableCell className="hidden md:table-cell text-sm">{client.email}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm">{client.phone || '-'}</TableCell>
+                    <TableCell className="text-sm">{projectCounts[client.id] || 0}</TableCell>
+                    <TableCell>
                       <Badge variant={client.status === "active" ? "default" : "secondary"} className="text-xs">
                         {client.status}
                       </Badge>
-                    </td>
-                    <td className="py-3 px-2 md:px-4">
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(client)} className="h-8 w-8 p-0">
                           <Edit className="h-3 w-3" />
@@ -321,11 +332,11 @@ export const ClientManagement = () => {
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
