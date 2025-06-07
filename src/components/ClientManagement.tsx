@@ -81,27 +81,9 @@ export const ClientManagement = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({ name: "", email: "", phone: "", company: "", status: "active" });
-    setEditingClient(null);
-  };
-
-  const handleDialogClose = (open: boolean) => {
-    if (!open) {
-      resetForm();
-    }
-    setIsDialogOpen(open);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Don't set loading on the whole component to prevent re-render
-    const submitButton = e.currentTarget.querySelector('button[type="submit"]') as HTMLButtonElement;
-    if (submitButton) {
-      submitButton.disabled = true;
-      submitButton.textContent = "Saving...";
-    }
+    setLoading(true);
 
     try {
       if (editingClient) {
@@ -122,8 +104,9 @@ export const ClientManagement = () => {
       }
 
       setIsDialogOpen(false);
-      resetForm();
-      await fetchClients();
+      setEditingClient(null);
+      setFormData({ name: "", email: "", phone: "", company: "", status: "active" });
+      fetchClients();
     } catch (error) {
       console.error('Error saving client:', error);
       toast({
@@ -132,10 +115,7 @@ export const ClientManagement = () => {
         variant: "destructive"
       });
     } finally {
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = editingClient ? "Update Client" : "Add Client";
-      }
+      setLoading(false);
     }
   };
 
@@ -162,8 +142,8 @@ export const ClientManagement = () => {
 
       if (error) throw error;
       toast({ title: "Success", description: "Client deleted successfully" });
-      await fetchClients();
-      await fetchProjectCounts();
+      fetchClients();
+      fetchProjectCounts();
     } catch (error) {
       console.error('Error deleting client:', error);
       toast({
@@ -204,9 +184,12 @@ export const ClientManagement = () => {
     <div className="space-y-4 md:space-y-6 p-4 md:p-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Client Management</h1>
-        <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={resetForm}>
+            <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => {
+              setEditingClient(null);
+              setFormData({ name: "", email: "", phone: "", company: "", status: "active" });
+            }}>
               <Plus className="h-4 w-4" />
               Add Client
             </Button>
@@ -264,8 +247,8 @@ export const ClientManagement = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button type="submit" className="w-full">
-                {editingClient ? "Update Client" : "Add Client"}
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? "Saving..." : editingClient ? "Update Client" : "Add Client"}
               </Button>
             </form>
           </DialogContent>
