@@ -24,50 +24,57 @@ export const ProfileTable = ({ profiles, onEdit, onDelete, onManageBank }: Profi
   };
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
+    <div className="overflow-x-auto min-w-full">
+      <table className="w-full min-w-[800px]">
         <thead>
           <tr className="border-b border-gray-200">
-            <th className="text-left py-3 px-4 font-medium text-gray-600">Name</th>
-            <th className="text-left py-3 px-4 font-medium text-gray-600">Email</th>
-            <th className="text-left py-3 px-4 font-medium text-gray-600">Phone</th>
-            <th className="text-left py-3 px-4 font-medium text-gray-600">Role</th>
-            <th className="text-left py-3 px-4 font-medium text-gray-600">Hourly Rate</th>
-            <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-            <th className="text-left py-3 px-4 font-medium text-gray-600">Created</th>
-            <th className="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
+            <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Name</th>
+            <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm hidden sm:table-cell">Email</th>
+            <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm hidden md:table-cell">Phone</th>
+            <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Role</th>
+            <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm hidden lg:table-cell">Hourly Rate</th>
+            <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Status</th>
+            <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm hidden xl:table-cell">Created</th>
+            <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Actions</th>
           </tr>
         </thead>
         <tbody>
           {profiles.map((profile) => (
             <tr key={profile.id} className="border-b border-gray-100 hover:bg-gray-50">
-              <td className="py-3 px-4 font-medium text-gray-900">{profile.full_name || 'Unnamed User'}</td>
-              <td className="py-3 px-4 text-gray-600">{profile.email}</td>
-              <td className="py-3 px-4 text-gray-600">{profile.phone || 'N/A'}</td>
-              <td className="py-3 px-4 text-gray-600">{getRoleLabel(profile.role)}</td>
-              <td className="py-3 px-4 text-gray-600">
-                <span className="font-medium text-green-600">
+              <td className="py-3 px-2 md:px-4">
+                <div className="font-medium text-gray-900 text-sm">{profile.full_name || 'Unnamed User'}</div>
+                <div className="text-xs text-gray-600 sm:hidden">{profile.email}</div>
+              </td>
+              <td className="py-3 px-2 md:px-4 text-gray-600 text-sm hidden sm:table-cell">{profile.email}</td>
+              <td className="py-3 px-2 md:px-4 text-gray-600 text-sm hidden md:table-cell">{profile.phone || 'N/A'}</td>
+              <td className="py-3 px-2 md:px-4 text-gray-600 text-sm">
+                <span className="text-xs">{getRoleLabel(profile.role)}</span>
+              </td>
+              <td className="py-3 px-2 md:px-4 text-gray-600 text-sm hidden lg:table-cell">
+                <span className="font-medium text-green-600 text-xs">
                   ${(profile.hourly_rate || 0).toFixed(2)}/hr
                 </span>
               </td>
-              <td className="py-3 px-4">
-                <Badge variant={profile.is_active ? "default" : "secondary"}>
+              <td className="py-3 px-2 md:px-4">
+                <Badge variant={profile.is_active ? "default" : "secondary"} className="text-xs">
                   {profile.is_active ? "Active" : "Inactive"}
                 </Badge>
               </td>
-              <td className="py-3 px-4 text-gray-600">{new Date(profile.created_at).toLocaleDateString()}</td>
-              <td className="py-3 px-4">
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => onEdit(profile)}>
-                    <Edit className="h-4 w-4" />
+              <td className="py-3 px-2 md:px-4 text-gray-600 text-sm hidden xl:table-cell">
+                {new Date(profile.created_at).toLocaleDateString()}
+              </td>
+              <td className="py-3 px-2 md:px-4">
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => onEdit(profile)} className="h-8 w-8 p-0">
+                    <Edit className="h-3 w-3" />
                   </Button>
                   {onManageBank && (
-                    <Button variant="ghost" size="sm" onClick={() => onManageBank(profile)}>
-                      <CreditCard className="h-4 w-4" />
+                    <Button variant="ghost" size="sm" onClick={() => onManageBank(profile)} className="h-8 w-8 p-0 hidden sm:flex">
+                      <CreditCard className="h-3 w-3" />
                     </Button>
                   )}
-                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => onDelete(profile.id)}>
-                    <Trash2 className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 h-8 w-8 p-0" onClick={() => onDelete(profile.id)}>
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
               </td>

@@ -159,12 +159,12 @@ export const ClientManagement = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Client Management</h1>
+    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Client Management</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2" onClick={() => {
+            <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => {
               setEditingClient(null);
               setFormData({ name: "", email: "", phone: "", company: "", status: "active" });
             }}>
@@ -172,7 +172,7 @@ export const ClientManagement = () => {
               Add Client
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
               <DialogTitle>{editingClient ? "Edit Client" : "Add New Client"}</DialogTitle>
             </DialogHeader>
@@ -225,7 +225,7 @@ export const ClientManagement = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading} className="w-full">
                 {loading ? "Saving..." : editingClient ? "Update Client" : "Add Client"}
               </Button>
             </form>
@@ -233,7 +233,7 @@ export const ClientManagement = () => {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Total Clients</CardTitle>
@@ -269,9 +269,9 @@ export const ClientManagement = () => {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Clients</CardTitle>
-            <div className="relative w-64">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <CardTitle className="text-lg md:text-xl">Clients</CardTitle>
+            <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder="Search clients..."
@@ -282,40 +282,43 @@ export const ClientManagement = () => {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-6">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Company</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Contact</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Email</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Phone</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Projects</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
+                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Company</th>
+                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm hidden sm:table-cell">Contact</th>
+                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm hidden md:table-cell">Email</th>
+                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm hidden lg:table-cell">Phone</th>
+                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Projects</th>
+                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Status</th>
+                  <th className="text-left py-3 px-2 md:px-4 font-medium text-gray-600 text-sm">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredClients.map((client) => (
                   <tr key={client.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium text-gray-900">{client.company}</td>
-                    <td className="py-3 px-4 text-gray-600">{client.name}</td>
-                    <td className="py-3 px-4 text-gray-600">{client.email}</td>
-                    <td className="py-3 px-4 text-gray-600">{client.phone || '-'}</td>
-                    <td className="py-3 px-4 text-gray-600">{projectCounts[client.id] || 0}</td>
-                    <td className="py-3 px-4">
-                      <Badge variant={client.status === "active" ? "default" : "secondary"}>
+                    <td className="py-3 px-2 md:px-4">
+                      <div className="font-medium text-gray-900 text-sm">{client.company}</div>
+                      <div className="text-xs text-gray-600 sm:hidden">{client.name}</div>
+                    </td>
+                    <td className="py-3 px-2 md:px-4 text-gray-600 text-sm hidden sm:table-cell">{client.name}</td>
+                    <td className="py-3 px-2 md:px-4 text-gray-600 text-sm hidden md:table-cell">{client.email}</td>
+                    <td className="py-3 px-2 md:px-4 text-gray-600 text-sm hidden lg:table-cell">{client.phone || '-'}</td>
+                    <td className="py-3 px-2 md:px-4 text-gray-600 text-sm">{projectCounts[client.id] || 0}</td>
+                    <td className="py-3 px-2 md:px-4">
+                      <Badge variant={client.status === "active" ? "default" : "secondary"} className="text-xs">
                         {client.status}
                       </Badge>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(client)}>
-                          <Edit className="h-4 w-4" />
+                    <td className="py-3 px-2 md:px-4">
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(client)} className="h-8 w-8 p-0">
+                          <Edit className="h-3 w-3" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(client.id)}>
-                          <Trash2 className="h-4 w-4" />
+                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 h-8 w-8 p-0" onClick={() => handleDelete(client.id)}>
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     </td>
