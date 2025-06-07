@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Edit, Trash2, Building2 } from "lucide-react";
+import { ActionDropdown, ActionItem } from "@/components/ui/action-dropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { Client } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
@@ -152,6 +153,20 @@ export const ClientManagement = () => {
       });
     }
   };
+
+  const getActionItems = (client: Client): ActionItem[] => [
+    {
+      label: "Edit",
+      onClick: () => handleEdit(client),
+      icon: <Edit className="h-4 w-4" />
+    },
+    {
+      label: "Delete",
+      onClick: () => handleDelete(client.id),
+      icon: <Trash2 className="h-4 w-4" />,
+      destructive: true
+    }
+  ];
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -303,9 +318,12 @@ export const ClientManagement = () => {
                       <p className="text-xs text-gray-500 truncate">{client.name}</p>
                       <p className="text-xs text-gray-500 truncate">{client.email}</p>
                     </div>
-                    <Badge variant={client.status === "active" ? "default" : "secondary"} className="text-xs ml-2">
-                      {client.status}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={client.status === "active" ? "default" : "secondary"} className="text-xs">
+                        {client.status}
+                      </Badge>
+                      <ActionDropdown items={getActionItems(client)} />
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 text-xs">
@@ -317,16 +335,6 @@ export const ClientManagement = () => {
                       <span className="text-gray-500">Projects:</span>
                       <p className="font-medium">{projectCounts[client.id] || 0}</p>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2 border-t">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(client)} className="flex-1">
-                      <Edit className="h-3 w-3 mr-1" />
-                      Edit
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(client.id)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
                   </div>
                 </div>
               ))}
@@ -343,7 +351,7 @@ export const ClientManagement = () => {
                     <TableHead>Phone</TableHead>
                     <TableHead className="w-[80px]">Projects</TableHead>
                     <TableHead className="w-[100px]">Status</TableHead>
-                    <TableHead className="w-[120px]">Actions</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -360,14 +368,7 @@ export const ClientManagement = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(client)} className="h-8 w-8 p-0">
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 h-8 w-8 p-0" onClick={() => handleDelete(client.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
+                        <ActionDropdown items={getActionItems(client)} />
                       </TableCell>
                     </TableRow>
                   ))}

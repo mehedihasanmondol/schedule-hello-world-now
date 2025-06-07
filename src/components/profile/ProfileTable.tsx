@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, CreditCard } from "lucide-react";
 import { Profile } from "@/types/database";
+import { ActionDropdown, ActionItem } from "@/components/ui/action-dropdown";
 import {
   Table,
   TableBody,
@@ -31,6 +32,33 @@ export const ProfileTable = ({ profiles, onEdit, onDelete, onManageBank }: Profi
     return roleLabels[role] || role;
   };
 
+  const getActionItems = (profile: Profile): ActionItem[] => {
+    const items: ActionItem[] = [
+      {
+        label: "Edit",
+        onClick: () => onEdit(profile),
+        icon: <Edit className="h-4 w-4" />
+      }
+    ];
+
+    if (onManageBank) {
+      items.push({
+        label: "Manage Bank",
+        onClick: () => onManageBank(profile),
+        icon: <CreditCard className="h-4 w-4" />
+      });
+    }
+
+    items.push({
+      label: "Delete",
+      onClick: () => onDelete(profile.id),
+      icon: <Trash2 className="h-4 w-4" />,
+      destructive: true
+    });
+
+    return items;
+  };
+
   return (
     <div className="w-full">
       {/* Mobile/Tablet Card Layout */}
@@ -47,9 +75,12 @@ export const ProfileTable = ({ profiles, onEdit, onDelete, onManageBank }: Profi
                   <p className="text-xs text-gray-500">{profile.phone}</p>
                 )}
               </div>
-              <Badge variant={profile.is_active ? "default" : "secondary"} className="text-xs ml-2">
-                {profile.is_active ? "Active" : "Inactive"}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={profile.is_active ? "default" : "secondary"} className="text-xs">
+                  {profile.is_active ? "Active" : "Inactive"}
+                </Badge>
+                <ActionDropdown items={getActionItems(profile)} />
+              </div>
             </div>
             
             <div className="grid grid-cols-2 gap-3 text-xs">
@@ -68,22 +99,6 @@ export const ProfileTable = ({ profiles, onEdit, onDelete, onManageBank }: Profi
                 <p className="font-medium">{new Date(profile.created_at).toLocaleDateString()}</p>
               </div>
             </div>
-
-            <div className="flex items-center gap-2 pt-2 border-t">
-              <Button variant="outline" size="sm" onClick={() => onEdit(profile)} className="flex-1">
-                <Edit className="h-3 w-3 mr-1" />
-                Edit
-              </Button>
-              {onManageBank && (
-                <Button variant="outline" size="sm" onClick={() => onManageBank(profile)} className="flex-1">
-                  <CreditCard className="h-3 w-3 mr-1" />
-                  Bank
-                </Button>
-              )}
-              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => onDelete(profile.id)}>
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </div>
           </div>
         ))}
       </div>
@@ -100,7 +115,7 @@ export const ProfileTable = ({ profiles, onEdit, onDelete, onManageBank }: Profi
               <TableHead>Hourly Rate</TableHead>
               <TableHead className="w-[100px]">Status</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead className="w-[120px]">Actions</TableHead>
+              <TableHead className="w-[80px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -128,19 +143,7 @@ export const ProfileTable = ({ profiles, onEdit, onDelete, onManageBank }: Profi
                   {new Date(profile.created_at).toLocaleDateString()}
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => onEdit(profile)} className="h-8 w-8 p-0">
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    {onManageBank && (
-                      <Button variant="ghost" size="sm" onClick={() => onManageBank(profile)} className="h-8 w-8 p-0">
-                        <CreditCard className="h-3 w-3" />
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 h-8 w-8 p-0" onClick={() => onDelete(profile.id)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
+                  <ActionDropdown items={getActionItems(profile)} />
                 </TableCell>
               </TableRow>
             ))}

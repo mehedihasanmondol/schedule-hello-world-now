@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, Edit, Trash2, FolderOpen } from "lucide-react";
+import { ActionDropdown, ActionItem } from "@/components/ui/action-dropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { Project, Client } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
@@ -184,6 +185,20 @@ export const ProjectManagement = () => {
         return "secondary";
     }
   };
+
+  const getActionItems = (project: Project): ActionItem[] => [
+    {
+      label: "Edit",
+      onClick: () => handleEdit(project),
+      icon: <Edit className="h-4 w-4" />
+    },
+    {
+      label: "Delete",
+      onClick: () => handleDelete(project.id),
+      icon: <Trash2 className="h-4 w-4" />,
+      destructive: true
+    }
+  ];
 
   if (loading && projects.length === 0) {
     return <div className="flex justify-center items-center h-64">Loading...</div>;
@@ -373,9 +388,12 @@ export const ProjectManagement = () => {
                         <p className="text-xs text-gray-500 line-clamp-2 mt-1">{project.description}</p>
                       )}
                     </div>
-                    <Badge variant={getStatusColor(project.status)} className="text-xs ml-2">
-                      {project.status}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getStatusColor(project.status)} className="text-xs">
+                        {project.status}
+                      </Badge>
+                      <ActionDropdown items={getActionItems(project)} />
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 text-xs">
@@ -387,16 +405,6 @@ export const ProjectManagement = () => {
                       <span className="text-gray-500">Budget:</span>
                       <p className="font-medium">${project.budget.toLocaleString()}</p>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2 border-t">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(project)} className="flex-1">
-                      <Edit className="h-3 w-3 mr-1" />
-                      Edit
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(project.id)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
                   </div>
                 </div>
               ))}
@@ -413,7 +421,7 @@ export const ProjectManagement = () => {
                     <TableHead>Start Date</TableHead>
                     <TableHead className="w-[100px]">Budget</TableHead>
                     <TableHead className="w-[100px]">Status</TableHead>
-                    <TableHead className="w-[120px]">Actions</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -436,14 +444,7 @@ export const ProjectManagement = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(project)} className="h-8 w-8 p-0">
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 h-8 w-8 p-0" onClick={() => handleDelete(project.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
+                        <ActionDropdown items={getActionItems(project)} />
                       </TableCell>
                     </TableRow>
                   ))}
